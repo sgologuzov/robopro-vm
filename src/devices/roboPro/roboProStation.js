@@ -1,13 +1,14 @@
 /**
- * Arduino Nano
+ * Robo Bot
  *
  * @overview Compared to the Arduino Uno, this control board use CH340 as
  * use to uart chip, uese oldbootloader to flash the firmware, and there are
  * more A6 and A7 pin options.
  */
-const OpenBlockArduinoUnoDevice = require('./arduinoUno');
+const OpenBlockArduinoUnoDevice = require('../arduinoUno/arduinoUno');
 
 const ArduinoPeripheral = require('../common/arduino-peripheral');
+const formatMessage = require("format-message");
 
 /**
  * The list of USB device filters.
@@ -15,7 +16,7 @@ const ArduinoPeripheral = require('../common/arduino-peripheral');
  */
 const PNPID_LIST = [
     // For chinese clones that use CH340
-    'USB\\VID_1A86&PID_7523'
+    'USB\\VID_2341&PID_0043'
 ];
 
 /**
@@ -34,8 +35,8 @@ const SERIAL_CONFIG = {
  */
 const DIVECE_OPT = {
     type: 'arduino',
-    fqbn: 'arduino:avr:nano:cpu=atmega328old',
-    firmware: 'arduinoUnoUltra.hex'
+    fqbn: 'arduino:avr:uno',
+    firmware: 'arduinoUno.hex'
 };
 
 const Pins = {
@@ -58,15 +59,13 @@ const Pins = {
     A2: 'A2',
     A3: 'A3',
     A4: 'A4',
-    A5: 'A5',
-    A6: 'A6',
-    A7: 'A7'
+    A5: 'A5'
 };
 
 /**
  * Manage communication with a Arduino Nano peripheral over a OpenBlock Link client socket.
  */
-class ArduinoNano extends ArduinoPeripheral{
+class RoboProStation extends ArduinoPeripheral{
     /**
      * Construct a Arduino communication object.
      * @param {Runtime} runtime - the OpenBlock runtime
@@ -75,56 +74,20 @@ class ArduinoNano extends ArduinoPeripheral{
      */
     constructor (runtime, deviceId, originalDeviceId) {
         super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DIVECE_OPT);
+        console.log('RoboProStation constructor')
     }
 }
 
 /**
   * OpenBlock blocks to interact with a Arduino Nano Ultra peripheral.
   */
-class OpenBlockArduinoNanoDevice extends OpenBlockArduinoUnoDevice{
+class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice{
 
     /**
       * @return {string} - the ID of this extension.
       */
     get DEVICE_ID () {
-        return 'arduinoNano';
-    }
-
-    get ANALOG_PINS_MENU () {
-        return [
-            {
-                text: 'A0',
-                value: Pins.A0
-            },
-            {
-                text: 'A1',
-                value: Pins.A1
-            },
-            {
-                text: 'A2',
-                value: Pins.A2
-            },
-            {
-                text: 'A3',
-                value: Pins.A3
-            },
-            {
-                text: 'A4',
-                value: Pins.A4
-            },
-            {
-                text: 'A5',
-                value: Pins.A5
-            },
-            {
-                text: 'A6',
-                value: Pins.A6
-            },
-            {
-                text: 'A7',
-                value: Pins.A7
-            }
-        ];
+        return 'roboProStation';
     }
 
     /**
@@ -136,8 +99,29 @@ class OpenBlockArduinoNanoDevice extends OpenBlockArduinoUnoDevice{
         super(runtime, originalDeviceId);
 
         // Create a new Arduino Nano peripheral instance
-        this._peripheral = new ArduinoNano(this.runtime, this.DEVICE_ID, originalDeviceId);
+        this._peripheral = new RoboProStation(this.runtime, this.DEVICE_ID, originalDeviceId);
+    }
+
+    /**
+     * @returns {Array.<object>} metadata for this extension and its blocks.
+     */
+    getInfo () {
+        return [
+            {
+                id: 'pin',
+                name: formatMessage({
+                    id: 'roboPro.category.roboProStation',
+                    default: 'Robo Station',
+                    description: 'The name of the arduino uno device pin category'
+                }),
+                color1: '#4C97FF',
+                color2: '#3373CC',
+                color3: '#3373CC',
+
+                blocks: [],
+            },
+        ]
     }
 }
 
-module.exports = OpenBlockArduinoNanoDevice;
+module.exports = OpenBlockRoboProStationDevice;

@@ -1,15 +1,15 @@
 {
-  "name": "openblock-vm",
-  "version": "0.2.0",
-  "description": "Virtual Machine for OpenBlock",
+  "name": "robopro-vm",
+  "version": "0.1.0",
+  "description": "Virtual Machine for RoboPro",
   "author": "Massachusetts Institute of Technology",
   "license": "BSD-3-Clause",
-  "homepage": "https://github.com/openblockcc/openblock-vm#readme",
+  "homepage": "https://github.com/sgologuzov/robopro-vm#readme",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/openblockcc/openblock-vm.git"
+    "url": "git+ssh://git@github.com/sgologuzov/robopro-vm.git"
   },
-  "main": "./dist/node/openblock-vm.js",
+  "main": "./dist/node/robopro-vm.js",
   "browser": "./src/index.js",
   "scripts": {
     "build": "npm run docs && webpack --progress --colors --bail",
