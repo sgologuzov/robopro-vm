@@ -57,7 +57,7 @@ const builtinDevices = {
 
     // RoboPro
     roboProBot: () => require('../devices/roboPro/roboProBot'),
-    roboProStation: () => require('../devices/roboPro/roboProStation'),
+    roboProStation: () => require('../devices/roboPro/roboProStation')
 
     // TODO: transform these to device extension.
     // wedo2: () => require('../extensions/scratch3_wedo2'),
