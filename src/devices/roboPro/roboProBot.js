@@ -8,11 +8,11 @@
 const OpenBlockArduinoUnoDevice = require('../arduinoUno/arduinoUno');
 
 const ArduinoPeripheral = require('../common/arduino-peripheral');
-const formatMessage = require("format-message");
-const BlockType = require("../../extension-support/block-type");
-const ArgumentType = require("../../extension-support/argument-type");
-const Timer = require("../../util/timer");
-const Cast = require("../../util/cast");
+const formatMessage = require('format-message');
+const BlockType = require('../../extension-support/block-type');
+const ArgumentType = require('../../extension-support/argument-type');
+const Timer = require('../../util/timer');
+const Cast = require('../../util/cast');
 
 /**
  * The list of USB device filters.
@@ -80,23 +80,23 @@ const Mode = {
 
 const Direction = {
     Forward: 'FORWARD',
-    Backward: 'BACKWARD',
+    Backward: 'BACKWARD'
 };
 
 const PinsMap = {
-    /*
     // RoboPro
     LeftMotorReverse: Pins.D4,
     LeftMotorPwm: Pins.D5,
     RightMotorPwm: Pins.D6,
-    RightMotorReverse: Pins.D7,
-     */
+    RightMotorReverse: Pins.D7
     // Keyestudio
+    /*
     LeftMotorReverse: Pins.D12,
     LeftMotorPwm: Pins.D3,
     RightMotorPwm: Pins.D11,
-    RightMotorReverse: Pins.D13,
-}
+    RightMotorReverse: Pins.D13
+     */
+};
 
 const MIN_MOTOR_POWER = 0;
 const MAX_MOTOR_POWER = 255;
@@ -112,9 +112,8 @@ class RoboProBot extends ArduinoPeripheral {
      * @param {string} deviceId - the id of the extension
      * @param {string} originalDeviceId - the original id of the peripheral, like xxx_arduinoUno
      */
-    constructor(runtime, deviceId, originalDeviceId) {
+    constructor (runtime, deviceId, originalDeviceId) {
         super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DIVECE_OPT);
-        console.log('RoboProBot constructor')
     }
 }
 
@@ -126,11 +125,11 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
     /**
      * @return {string} - the ID of this extension.
      */
-    get DEVICE_ID() {
+    get DEVICE_ID () {
         return 'roboProBot';
     }
 
-    get DIRECTIONS_MENU() {
+    get DIRECTIONS_MENU () {
         return [
             {
                 text: formatMessage({
@@ -147,8 +146,8 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                     description: 'label for backward direction'
                 }),
                 value: Direction.Backward
-            },
-        ]
+            }
+        ];
     }
 
     /**
@@ -156,27 +155,27 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      * @param {Runtime} runtime - the OpenBlock runtime.
      * @param {string} originalDeviceId - the original id of the peripheral, like xxx_arduinoUno
      */
-    constructor(runtime, originalDeviceId) {
+    constructor (runtime, originalDeviceId) {
         super(runtime, originalDeviceId);
 
         // Create a new Arduino Nano peripheral instance
         this._peripheral = new RoboProBot(this.runtime, this.DEVICE_ID, originalDeviceId);
-        this._peripheral.setPinMode(PinsMap.LeftMotorReverse, Mode.Output)
-        this._peripheral.setPinMode(PinsMap.LeftMotorPwm, Mode.Output)
-        this._peripheral.setPinMode(PinsMap.RightMotorReverse, Mode.Output)
-        this._peripheral.setPinMode(PinsMap.RightMotorPwm, Mode.Output)
+        this._peripheral.setPinMode(PinsMap.LeftMotorReverse, Mode.Output);
+        this._peripheral.setPinMode(PinsMap.LeftMotorPwm, Mode.Output);
+        this._peripheral.setPinMode(PinsMap.RightMotorReverse, Mode.Output);
+        this._peripheral.setPinMode(PinsMap.RightMotorPwm, Mode.Output);
 
-        this._directionRight = Direction.Forward
-        this._directionLeft = Direction.Forward
-        this._powerRight = MAX_MOTOR_POWER
-        this._powerLeft = MAX_MOTOR_POWER
-        this._motorsOnForSecondsTimeout = null
+        this._directionRight = Direction.Forward;
+        this._directionLeft = Direction.Forward;
+        this._powerRight = MAX_MOTOR_POWER;
+        this._powerLeft = MAX_MOTOR_POWER;
+        this._motorsOnForSecondsTimeout = null;
     }
 
     /**
      * @returns {Array.<object>} metadata for this extension and its blocks.
      */
-    getInfo() {
+    getInfo () {
         return [
             {
                 id: 'roboProBot',
@@ -202,7 +201,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                             SECONDS: {
                                 type: ArgumentType.NUMBER,
                                 defaultValue: '1'
-                            },
+                            }
                         }
                     },
                     {
@@ -212,7 +211,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                             default: 'Motors on',
                             description: 'Turn on motors'
                         }),
-                        blockType: BlockType.COMMAND,
+                        blockType: BlockType.COMMAND
                     },
                     {
                         opcode: 'motorsOff',
@@ -221,7 +220,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                             default: 'Motors off',
                             description: 'Turn off motors'
                         }),
-                        blockType: BlockType.COMMAND,
+                        blockType: BlockType.COMMAND
                     },
                     {
                         opcode: 'setDirectionTo',
@@ -236,7 +235,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                                 type: ArgumentType.STRING,
                                 menu: 'directions',
                                 defaultValue: Direction.Forward
-                            },
+                            }
                         }
                     },
                     {
@@ -251,7 +250,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                             DEGREES: {
                                 type: ArgumentType.ANGLE,
                                 defaultValue: 15
-                            },
+                            }
                         }
                     },
                     {
@@ -266,14 +265,15 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                             DEGREES: {
                                 type: ArgumentType.ANGLE,
                                 defaultValue: 15
-                            },
+                            }
                         }
                     },
                     {
                         opcode: 'setPowerAndDirection',
                         text: formatMessage({
                             id: 'roboPro.bot.setPowerAndDirection',
-                            default: 'L [DIRECTION_LEFT] R [DIRECTION_RIGHT] set power L [POWER_LEFT] R [POWER_RIGHT] %',
+                            default: 'L [DIRECTION_LEFT] R [DIRECTION_RIGHT] set power ' +
+                                'L [POWER_LEFT] R [POWER_RIGHT] %',
                             description: 'Set robot power and direction'
                         }),
                         blockType: BlockType.COMMAND,
@@ -295,7 +295,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                             POWER_RIGHT: {
                                 type: ArgumentType.NUMBER,
                                 defaultValue: 30
-                            },
+                            }
                         }
                     },
                     {
@@ -339,7 +339,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                                 defaultValue: Level.High
                             }
                         }
-                    },
+                    }
                 ],
                 menus: {
                     directions: {
@@ -368,43 +368,39 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                         items: this.INTERRUP_MODE_MENU
                     }
                 }
-            },
-        ]
+            }
+        ];
     }
 
     /**
      * Turn on motors for seconds.
      * @param {object} args - the block's arguments.
-     * @return {Promise} - a Promise that resolves after the set pin mode is done.
+     * @param {object} util - utility object provided by the runtime.
      */
-    motorsOnForSeconds(args, util) {
+    motorsOnForSeconds (args, util) {
         this._motorsOnForSeconds(args.SECONDS, util);
     }
 
     /**
      * Turn on motors.
-     * @param {object} args - the block's arguments.
-     * @return {Promise} - a Promise that resolves after the set pin mode is done.
      */
-    motorsOn(args) {
+    motorsOn () {
         this._motorsOn();
     }
 
     /**
      * Turn off motors.
      * @param {object} args - the block's arguments.
-     * @return {Promise} - a Promise that resolves after the set pin mode is done.
      */
-    motorsOff(args) {
+    motorsOff () {
         this._motorsOff();
     }
 
     /**
      * Set robot direction.
      * @param {object} args - the block's arguments.
-     * @return {Promise} - a Promise that resolves after the set pin mode is done.
      */
-    setDirectionTo(args) {
+    setDirectionTo (args) {
         this._directionLeft = args.DIRECTION;
         this._directionRight = args.DIRECTION;
     }
@@ -412,9 +408,9 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
     /**
      * Turn robot right.
      * @param {object} args - the block's arguments.
-     * @return {Promise} - a Promise that resolves after the set pin mode is done.
+     * @param {object} util - utility object provided by the runtime.
      */
-    turnRight(args, util) {
+    turnRight (args, util) {
         this._directionLeft = Direction.Backward;
         this._directionRight = Direction.Forward;
         this._motorsOnForSeconds(args.DEGREES / DEGREE_RATIO, util);
@@ -423,9 +419,9 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
     /**
      * Turn robot left.
      * @param {object} args - the block's arguments.
-     * @return {Promise} - a Promise that resolves after the set pin mode is done.
-     */
-    turnLeft(args, util) {
+     * @param {object} util - utility object provided by the runtime.
+     **/
+    turnLeft (args, util) {
         this._directionLeft = Direction.Forward;
         this._directionRight = Direction.Backward;
         this._motorsOnForSeconds(args.DEGREES / DEGREE_RATIO, util);
@@ -434,16 +430,15 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
     /**
      * Set left and right motors power and direction.
      * @param {object} args - the block's arguments.
-     * @return {Promise} - a Promise that resolves after the set pin mode is done.
      */
-    setPowerAndDirection(args) {
+    setPowerAndDirection (args) {
         this._directionLeft = args.DIRECTION_LEFT;
         this._directionRight = args.DIRECTION_RIGHT;
         this._powerLeft = this._convertPercentPower(args.POWER_LEFT);
         this._powerRight = this._convertPercentPower(args.POWER_RIGHT);
     }
 
-    _motorsOnForSeconds(durationSec, util) {
+    _motorsOnForSeconds (durationSec, util) {
         if (this._stackTimerNeedsInit(util)) {
             const duration = Math.max(0, Cast.toNumber(durationSec));
             clearTimeout(this._motorsOnForSecondsTimeout);
@@ -457,25 +452,27 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
         }
     }
 
-    _motorsOn() {
-        this._peripheral.setDigitalOutput(PinsMap.LeftMotorReverse, this._directionLeft === Direction.Backward ? Level.High : Level.Low);
+    _motorsOn () {
+        this._peripheral.setDigitalOutput(PinsMap.LeftMotorReverse,
+            this._directionLeft === Direction.Backward ? Level.High : Level.Low);
         this._peripheral.setPwmOutput(PinsMap.LeftMotorPwm, this._powerLeft);
-        this._peripheral.setDigitalOutput(PinsMap.RightMotorReverse, this._directionRight === Direction.Backward ? Level.High : Level.Low);
+        this._peripheral.setDigitalOutput(PinsMap.RightMotorReverse,
+            this._directionRight === Direction.Backward ? Level.High : Level.Low);
         this._peripheral.setPwmOutput(PinsMap.RightMotorPwm, this._powerRight);
     }
 
-    _motorsOff() {
+    _motorsOff () {
         this._peripheral.setPwmOutput(PinsMap.LeftMotorPwm, MIN_MOTOR_POWER);
         this._peripheral.setPwmOutput(PinsMap.RightMotorPwm, MIN_MOTOR_POWER);
     }
 
-    _convertPercentPower(percentPower) {
+    _convertPercentPower (percentPower) {
         if (percentPower < 0) {
             percentPower = 0;
         } else if (percentPower > 100) {
             percentPower = 100;
         }
-        return (percentPower * (MAX_MOTOR_POWER - MIN_MOTOR_POWER)) / 100 + MIN_MOTOR_POWER;
+        return ((percentPower * (MAX_MOTOR_POWER - MIN_MOTOR_POWER)) / 100) + MIN_MOTOR_POWER;
     }
 
     /**
@@ -484,7 +481,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      * @return {boolean} - true if the stack timer needs to be initialized.
      * @private
      */
-    _stackTimerNeedsInit(util) {
+    _stackTimerNeedsInit (util) {
         return !util.stackFrame.timer;
     }
 
@@ -494,7 +491,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      * @param {number} duration - a duration in seconds to set the timer for.
      * @private
      */
-    _startStackTimer(util, duration) {
+    _startStackTimer (util, duration) {
         util.stackFrame.timer = new Timer();
         util.stackFrame.timer.start();
         util.stackFrame.duration = duration;
@@ -506,7 +503,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      * @param {object} util - utility object provided by the runtime.
      * @private
      */
-    _checkStackTimer(util) {
+    _checkStackTimer (util) {
         const timeElapsed = util.stackFrame.timer.timeElapsed();
         if (timeElapsed < util.stackFrame.duration * 1000) {
             util.yield();

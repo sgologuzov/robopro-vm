@@ -8,7 +8,7 @@
 const OpenBlockArduinoUnoDevice = require('../arduinoUno/arduinoUno');
 
 const ArduinoPeripheral = require('../common/arduino-peripheral');
-const formatMessage = require("format-message");
+const formatMessage = require('format-message');
 
 /**
  * The list of USB device filters.
@@ -39,29 +39,6 @@ const DIVECE_OPT = {
     firmware: 'arduinoUno.hex'
 };
 
-const Pins = {
-    D0: '0',
-    D1: '1',
-    D2: '2',
-    D3: '3',
-    D4: '4',
-    D5: '5',
-    D6: '6',
-    D7: '7',
-    D8: '8',
-    D9: '9',
-    D10: '10',
-    D11: '11',
-    D12: '12',
-    D13: '13',
-    A0: 'A0',
-    A1: 'A1',
-    A2: 'A2',
-    A3: 'A3',
-    A4: 'A4',
-    A5: 'A5'
-};
-
 /**
  * Manage communication with a Arduino Nano peripheral over a OpenBlock Link client socket.
  */
@@ -74,7 +51,6 @@ class RoboProStation extends ArduinoPeripheral{
      */
     constructor (runtime, deviceId, originalDeviceId) {
         super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DIVECE_OPT);
-        console.log('RoboProStation constructor')
     }
 }
 
@@ -118,9 +94,9 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice{
                 color2: '#3373CC',
                 color3: '#3373CC',
 
-                blocks: [],
-            },
-        ]
+                blocks: []
+            }
+        ];
     }
 }
 
