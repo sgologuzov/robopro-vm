@@ -89,7 +89,7 @@ const PinsMap = {
     ExtSensor3: Pins.A0,
     ExtSensor2: Pins.A1,
     Slider: Pins.A2,
-    Microphone: Pins.A3,
+    SoundSensor: Pins.A3,
     LightSensor: Pins.A4
 };
 
@@ -118,6 +118,118 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      */
     get DEVICE_ID () {
         return 'roboProStation';
+    }
+
+    get BUTTONS_MENU () {
+        return [
+            {
+                text: '1',
+                value: PinsMap.Button1
+            },
+            {
+                text: '2',
+                value: PinsMap.Button2
+            },
+            {
+                text: '3',
+                value: PinsMap.Button3
+            },
+            {
+                text: '4',
+                value: PinsMap.Button4
+            },
+            {
+                text: '5',
+                value: PinsMap.Button5
+            }
+        ];
+    }
+
+    get COLOR_LEDS_MENU () {
+        return [
+            {
+                text: formatMessage({
+                    id: 'roboPro.colorLedsMenu.red',
+                    default: 'red',
+                    description: 'label for red LED'
+                }),
+                value: PinsMap.RedLED
+            },
+            {
+                text: formatMessage({
+                    id: 'roboPro.colorLedsMenu.yellow',
+                    default: 'yellow',
+                    description: 'label for yellow LED'
+                }),
+                value: PinsMap.YellowLED
+            },
+            {
+                text: formatMessage({
+                    id: 'roboPro.colorLedsMenu.green',
+                    default: 'green',
+                    description: 'label for green LED'
+                }),
+                value: PinsMap.GreenLED
+            }
+        ];
+    }
+
+    get DIGITAL_INPUT_PINS_MENU () {
+        return [
+            {
+                text: 'D8',
+                value: Pins.D8
+            },
+            {
+                text: 'D9',
+                value: Pins.D9
+            },
+            {
+                text: 'D10',
+                value: Pins.D10
+            },
+            {
+                text: 'D11',
+                value: Pins.D11
+            },
+            {
+                text: 'D12',
+                value: Pins.D12
+            },
+            {
+                text: 'D13',
+                value: Pins.D13
+            }
+        ];
+    }
+
+    get DIGITAL_OUTPUT_PINS_MENU () {
+        return [
+            {
+                text: 'D2',
+                value: Pins.D2
+            },
+            {
+                text: 'D3',
+                value: Pins.D3
+            },
+            {
+                text: 'D4',
+                value: Pins.D4
+            },
+            {
+                text: 'D5',
+                value: Pins.D5
+            },
+            {
+                text: 'D6',
+                value: Pins.D6
+            },
+            {
+                text: 'D7',
+                value: Pins.D7
+            }
+        ];
     }
 
     get LEDS_MENU () {
@@ -157,31 +269,48 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
         ];
     }
 
-    get COLOR_LEDS_MENU () {
+    get PWM_PINS_MENU () {
+        return [
+            {
+                text: 'D3',
+                value: Pins.D3
+            },
+            {
+                text: 'D5',
+                value: Pins.D5
+            },
+            {
+                text: 'D6',
+                value: Pins.D6
+            }
+        ];
+    }
+
+    get SENSORS_MENU () {
         return [
             {
                 text: formatMessage({
-                    id: 'roboPro.colorLedsMenu.red',
-                    default: 'red',
-                    description: 'label for red LED'
+                    id: 'roboPro.sensorsMenu.lightSensor',
+                    default: 'light sensor',
+                    description: 'label for light sensor'
                 }),
-                value: PinsMap.RedLED
+                value: PinsMap.LightSensor
             },
             {
                 text: formatMessage({
-                    id: 'roboPro.colorLedsMenu.yellow',
-                    default: 'yellow',
-                    description: 'label for yellow LED'
+                    id: 'roboPro.sensorsMenu.soundSensor',
+                    default: 'sound sensor',
+                    description: 'label for sound sensor'
                 }),
-                value: PinsMap.YellowLED
+                value: PinsMap.SoundSensor
             },
             {
                 text: formatMessage({
-                    id: 'roboPro.colorLedsMenu.green',
-                    default: 'green',
-                    description: 'label for green LED'
+                    id: 'roboPro.sensorsMenu.slider',
+                    default: 'slider',
+                    description: 'label for slider'
                 }),
-                value: PinsMap.GreenLED
+                value: PinsMap.Slider
             }
         ];
     }
@@ -219,7 +348,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         opcode: 'ledTurnOn',
                         text: formatMessage({
                             id: 'roboPro.station.ledTurnOn',
-                            default: 'Turn LED [LED_INDEX] on',
+                            default: 'turn LED [LED_INDEX] on',
                             description: 'Turn LED on'
                         }),
                         blockType: BlockType.COMMAND,
@@ -235,7 +364,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         opcode: 'ledTurnOff',
                         text: formatMessage({
                             id: 'roboPro.station.ledTurnOff',
-                            default: 'Turn LED [LED_INDEX] off',
+                            default: 'turn LED [LED_INDEX] off',
                             description: 'Turn LED off'
                         }),
                         blockType: BlockType.COMMAND,
@@ -251,7 +380,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         opcode: 'colorLedTurnOn',
                         text: formatMessage({
                             id: 'roboPro.station.colorLedTurnOn',
-                            default: 'Turn LED [LED_PIN] on',
+                            default: 'turn LED [LED_PIN] on',
                             description: 'Turn LED on'
                         }),
                         blockType: BlockType.COMMAND,
@@ -267,7 +396,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         opcode: 'colorLedTurnOff',
                         text: formatMessage({
                             id: 'roboPro.station.colorLedTurnOff',
-                            default: 'Turn LED [LED_PIN] on',
+                            default: 'turn LED [LED_PIN] off',
                             description: 'Turn LED on'
                         }),
                         blockType: BlockType.COMMAND,
@@ -283,7 +412,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         opcode: 'colorLedTurnOff',
                         text: formatMessage({
                             id: 'roboPro.station.colorLedTurnOff',
-                            default: 'Turn LED [LED_PIN] on',
+                            default: 'turn LED [LED_PIN] on',
                             description: 'Turn LED on'
                         }),
                         blockType: BlockType.COMMAND,
@@ -299,7 +428,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         opcode: 'playNote',
                         text: formatMessage({
                             id: 'roboPro.station.playNote',
-                            default: 'Play note [NOTE]',
+                            default: 'play note [NOTE]',
                             description: 'play a note'
                         }),
                         blockType: BlockType.COMMAND,
@@ -309,14 +438,141 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                                 defaultValue: 48
                             }
                         }
+                    },
+                    {
+                        opcode: 'readSensor',
+                        text: formatMessage({
+                            id: 'roboPro.station.readSensor',
+                            default: 'read [PIN]',
+                            description: 'play a note'
+                        }),
+                        blockType: BlockType.REPORTER,
+                        arguments: {
+                            PIN: {
+                                type: ArgumentType.STRING,
+                                menu: 'sensors',
+                                defaultValue: PinsMap.LightSensor
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'readButton',
+                        text: formatMessage({
+                            id: 'roboPro.station.readButton',
+                            default: 'button [PIN] pressed',
+                            description: 'roboProStation read button'
+                        }),
+                        blockType: BlockType.BOOLEAN,
+                        arguments: {
+                            PIN: {
+                                type: ArgumentType.STRING,
+                                menu: 'buttons',
+                                defaultValue: PinsMap.Button1
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'readAnalogPin',
+                        text: formatMessage({
+                            id: 'roboPro.station.readAnalogPin',
+                            default: 'read pin [PIN]',
+                            description: 'roboProStation read analog pin'
+                        }),
+                        blockType: BlockType.REPORTER,
+                        arguments: {
+                            PIN: {
+                                type: ArgumentType.STRING,
+                                menu: 'analogPins',
+                                defaultValue: Pins.A0
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'readDigitalPin',
+                        text: formatMessage({
+                            id: 'roboPro.station.readDigitalPin',
+                            default: 'read pin [PIN]',
+                            description: 'roboProStation read digital pin'
+                        }),
+                        blockType: BlockType.BOOLEAN,
+                        arguments: {
+                            PIN: {
+                                type: ArgumentType.STRING,
+                                menu: 'digitalInputPins',
+                                defaultValue: Pins.D8
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'setDigitalOutput',
+                        text: formatMessage({
+                            id: 'roboPro.station.setDigitalOutput',
+                            default: 'set pin [PIN] out [LEVEL]',
+                            description: 'roboProStation set digital pin out'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            PIN: {
+                                type: ArgumentType.STRING,
+                                menu: 'digitalOutputPins',
+                                defaultValue: Pins.D0
+                            },
+                            LEVEL: {
+                                type: ArgumentType.STRING,
+                                menu: 'level',
+                                defaultValue: Level.High
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'setPwmOutput',
+                        text: formatMessage({
+                            id: 'roboPro.station.setPwmOutput',
+                            default: 'set pwm pin [PIN] out [OUT]',
+                            description: 'roboProStation set pwm pin out'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            PIN: {
+                                type: ArgumentType.STRING,
+                                menu: 'pwmPins',
+                                defaultValue: Pins.D3
+                            },
+                            OUT: {
+                                type: ArgumentType.UINT8_NUMBER,
+                                defaultValue: '255'
+                            }
+                        }
                     }
                 ],
                 menus: {
-                    leds: {
-                        items: this.LEDS_MENU
+                    analogPins: {
+                        items: this.ANALOG_PINS_MENU
+                    },
+                    buttons: {
+                        items: this.BUTTONS_MENU
                     },
                     colorLeds: {
                         items: this.COLOR_LEDS_MENU
+                    },
+                    digitalInputPins: {
+                        items: this.DIGITAL_INPUT_PINS_MENU
+                    },
+                    digitalOutputPins: {
+                        items: this.DIGITAL_OUTPUT_PINS_MENU
+                    },
+                    leds: {
+                        items: this.LEDS_MENU
+                    },
+                    level: {
+                        acceptReporters: true,
+                        items: this.LEVEL_MENU
+                    },
+                    pwmPins: {
+                        items: this.PWM_PINS_MENU
+                    },
+                    sensors: {
+                        items: this.SENSORS_MENU
                     }
                 }
             }
@@ -368,6 +624,24 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     playNote (args) {
         const note = Cast.toNumber(args.NOTE);
         log.info(`[playNote] note: ${note}`);
+    }
+
+    /**
+     * Read sensor.
+     * @param {object} args - the block's arguments.
+     * @return {number} - analog value fo the pin.
+     */
+    readSensor (args) {
+        return this._peripheral.readAnalogPin(args.PIN);
+    }
+
+    /**
+     * Read button.
+     * @param {object} args - the block's arguments.
+     * @return {boolean} - true if read high level, false if read low level.
+     */
+    readButton (args) {
+        return this._peripheral.readDigitalPin(args.PIN);
     }
 }
 
