@@ -193,7 +193,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                         opcode: 'motorsOnForSeconds',
                         text: formatMessage({
                             id: 'roboPro.bot.motorsOnForSeconds',
-                            default: 'Motors on for [SECONDS] seconds',
+                            default: 'motors on for [SECONDS] seconds',
                             description: 'roboProBot turn on motors'
                         }),
                         blockType: BlockType.COMMAND,
@@ -208,7 +208,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                         opcode: 'motorsOn',
                         text: formatMessage({
                             id: 'roboPro.bot.motorsOn',
-                            default: 'Motors on',
+                            default: 'motors on',
                             description: 'Turn on motors'
                         }),
                         blockType: BlockType.COMMAND
@@ -217,7 +217,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                         opcode: 'motorsOff',
                         text: formatMessage({
                             id: 'roboPro.bot.motorsOff',
-                            default: 'Motors off',
+                            default: 'motors off',
                             description: 'Turn off motors'
                         }),
                         blockType: BlockType.COMMAND
@@ -226,7 +226,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                         opcode: 'setDirectionTo',
                         text: formatMessage({
                             id: 'roboPro.bot.setDirectionTo',
-                            default: 'Set robot direction to [DIRECTION]',
+                            default: 'set robot direction to [DIRECTION]',
                             description: 'Set robot direction'
                         }),
                         blockType: BlockType.COMMAND,
@@ -242,7 +242,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                         opcode: 'turnRight',
                         text: formatMessage({
                             id: 'roboPro.bot.turnRight',
-                            default: 'Turn right for [DEGREES] degrees',
+                            default: 'turn right for [DEGREES] degrees',
                             description: 'Turn robot right'
                         }),
                         blockType: BlockType.COMMAND,
@@ -257,7 +257,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                         opcode: 'turnLeft',
                         text: formatMessage({
                             id: 'roboPro.bot.turnLeft',
-                            default: 'Turn left for [DEGREES] degrees',
+                            default: 'turn left for [DEGREES] degrees',
                             description: 'Turn robot left'
                         }),
                         blockType: BlockType.COMMAND,
@@ -299,49 +299,26 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                         }
                     },
                     {
-                        opcode: 'setPinMode',
+                        opcode: 'readAnalogPin',
                         text: formatMessage({
-                            id: 'arduinoUno.pins.setPinMode',
-                            default: 'set pin [PIN] mode [MODE]',
-                            description: 'arduinoUno set pin mode'
+                            id: 'roboPro.bot.readAnalogPin',
+                            default: 'read pin [PIN]',
+                            description: 'roboProBot read analog pin'
                         }),
-                        blockType: BlockType.COMMAND,
+                        blockType: BlockType.REPORTER,
                         arguments: {
                             PIN: {
                                 type: ArgumentType.STRING,
-                                menu: 'pins',
-                                defaultValue: Pins.D0
-                            },
-                            MODE: {
-                                type: ArgumentType.STRING,
-                                menu: 'mode',
-                                defaultValue: Mode.Input
-                            }
-                        }
-                    },
-                    {
-                        opcode: 'setDigitalOutput',
-                        text: formatMessage({
-                            id: 'arduinoUno.pins.setDigitalOutput',
-                            default: 'set digital pin [PIN] out [LEVEL]',
-                            description: 'arduinoUno set digital pin out'
-                        }),
-                        blockType: BlockType.COMMAND,
-                        arguments: {
-                            PIN: {
-                                type: ArgumentType.STRING,
-                                menu: 'pins',
-                                defaultValue: Pins.D0
-                            },
-                            LEVEL: {
-                                type: ArgumentType.STRING,
-                                menu: 'level',
-                                defaultValue: Level.High
+                                menu: 'analogPins',
+                                defaultValue: Pins.A0
                             }
                         }
                     }
                 ],
                 menus: {
+                    analogPins: {
+                        items: this.ANALOG_PINS_MENU
+                    },
                     directions: {
                         items: this.DIRECTIONS_MENU
                     },
@@ -350,9 +327,6 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                     },
                     mode: {
                         items: this.MODE_MENU
-                    },
-                    analogPins: {
-                        items: this.ANALOG_PINS_MENU
                     },
                     level: {
                         acceptReporters: true,

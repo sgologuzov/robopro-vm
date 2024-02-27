@@ -279,7 +279,7 @@ class ExtensionManager {
      */
     getDeviceList () {
         return new Promise(resolve => {
-            fetch(`${localResourcesServerUrl}devices/cmtye/${formatMessage.setup().locale}.json`)
+            fetch(`${localResourcesServerUrl}devices/${formatMessage.setup().locale}.json`)
                 .then(response => response.json())
                 .then(devices => {
                     devices = devices.map(dev => {
@@ -366,7 +366,7 @@ class ExtensionManager {
      */
     getDeviceExtensionsList () {
         return new Promise(resolve => {
-            fetch(`${localResourcesServerUrl}extensions/cmtye/${formatMessage.setup().locale}.json`)
+            fetch(`${localResourcesServerUrl}extensions/${formatMessage.setup().locale}.json`)
                 .then(response => response.json())
                 .then(extensions => {
                     extensions = extensions.map(extension => {
