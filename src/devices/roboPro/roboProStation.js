@@ -72,10 +72,16 @@ const Level = {
     Low: 'LOW'
 };
 
+const Mode = {
+    Input: 'INPUT',
+    Output: 'OUTPUT',
+    InputPullup: 'INPUT_PULLUP'
+};
+
 const PinsMap = {
     // RoboPro
     DataLED: Pins.D2,
-    Speaker: Pins.D3,
+    Buzzer: Pins.D3,
     ClkLED: Pins.D4,
     GreenLED: Pins.D5,
     YellowLED: Pins.D6,
@@ -90,7 +96,8 @@ const PinsMap = {
     ExtSensor2: Pins.A1,
     Slider: Pins.A2,
     SoundSensor: Pins.A3,
-    LightSensor: Pins.A4
+    LightSensor: Pins.A4,
+    LatchLED: Pins.A5
 };
 
 /**
@@ -325,6 +332,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
 
         // Create a new Arduino Nano peripheral instance
         this._peripheral = new RoboProStation(this.runtime, this.DEVICE_ID, originalDeviceId);
+        this._ledState = [0, 0, 0, 0, 0, 0, 0, 0];
     }
 
     /**
@@ -586,6 +594,8 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     ledTurnOn (args) {
         const ledIndex = args.LED_INDEX;
         log.info(`[ledTurnOn] ledIndex: ${ledIndex}`);
+        this._ledState[ledIndex] = 1;
+        this._updateShiftRegister();
     }
 
     /**
@@ -595,6 +605,8 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     ledTurnOff (args) {
         const ledIndex = args.LED_INDEX;
         log.info(`[ledTurnOff] ledIndex: ${ledIndex}`);
+        this._ledState[ledIndex] = 0;
+        this._updateShiftRegister();
     }
 
     /**
@@ -620,10 +632,22 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     /**
      * Play a note.
      * @param {object} args - the block's arguments.
+     * @param {BlockUtility} util - utility object provided by the runtime.
      */
-    playNote (args) {
+    playNote (args, util) {
         const note = Cast.toNumber(args.NOTE);
         log.info(`[playNote] note: ${note}`);
+        if (util.stackTimerNeedsInit()) {
+            const duration = 0.5;
+            clearTimeout(this._playNoteTimeout);
+            this._playNoteTimeout = setTimeout(() => {
+                this._peripheral.setPwmOutput(PinsMap.Buzzer, 0);
+            }, duration * 1000);
+            util.startStackTimer(duration);
+            this._peripheral.setPwmOutput(PinsMap.Buzzer, note);
+        } else if (!util.stackTimerFinished()) {
+            util.yield();
+        }
     }
 
     /**
@@ -638,10 +662,31 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     /**
      * Read button.
      * @param {object} args - the block's arguments.
-     * @return {boolean} - true if read high level, false if read low level.
+     * @return {Promise} - true if read high level, false if read low level.
      */
     readButton (args) {
         return this._peripheral.readDigitalPin(args.PIN);
+    }
+
+    _updateShiftRegister () {
+        this._peripheral.setPinMode(PinsMap.LatchLED, Mode.Output);
+        this._peripheral.setDigitalOutput(PinsMap.LatchLED, Level.Low);
+        let pinState;
+        this._peripheral.setDigitalOutput(PinsMap.DataLED, Level.Low);
+        this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low);
+        for (let i = 0; i < this._ledState.length; i++) {
+            this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low);
+            if (this._ledState[i] > 0) {
+                pinState = Level.High;
+            } else {
+                pinState = Level.Low;
+            }
+            this._peripheral.setDigitalOutput(PinsMap.DataLED, pinState);
+            this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.High);
+            this._peripheral.setDigitalOutput(PinsMap.DataLED, Level.Low);
+        }
+        this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low);
+        this._peripheral.setDigitalOutput(PinsMap.LatchLED, Level.High);
     }
 }
 
