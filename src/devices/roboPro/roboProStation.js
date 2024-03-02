@@ -10,6 +10,7 @@ const ArduinoPeripheral = require('../common/arduino-peripheral');
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
+const MathUtil = require('../../util/math-util');
 const OpenBlockArduinoUnoDevice = require('../arduinoUno/arduinoUno');
 const formatMessage = require('format-message');
 const log = require('../../util/log');
@@ -119,6 +120,23 @@ class RoboProStation extends ArduinoPeripheral {
  * OpenBlock blocks to interact with an Arduino Nano Ultra peripheral.
  */
 class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
+
+    /**
+     * The minimum and maximum MIDI note numbers, for clamping the input to play note.
+     * @type {{min: number, max: number}}
+     */
+    static get MIDI_NOTE_RANGE () {
+        return {min: 0, max: 130};
+    }
+
+    /**
+     * The minimum and maximum beat values, for clamping the duration of play note, play drum and rest.
+     * 100 beats at the default tempo of 60bpm is 100 seconds.
+     * @type {{min: number, max: number}}
+     */
+    static get BEAT_RANGE () {
+        return {min: 0, max: 100};
+    }
 
     /**
      * @return {string} - the ID of this extension.
@@ -433,17 +451,21 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         }
                     },
                     {
-                        opcode: 'playNote',
-                        text: formatMessage({
-                            id: 'roboPro.station.playNote',
-                            default: 'play note [NOTE]',
-                            description: 'play a note'
-                        }),
+                        opcode: 'playNoteForBeats',
                         blockType: BlockType.COMMAND,
+                        text: formatMessage({
+                            id: 'roboPro.station.playNoteForBeats',
+                            default: 'play note [NOTE] for [BEATS] beats',
+                            description: 'play a note for a number of beats'
+                        }),
                         arguments: {
                             NOTE: {
                                 type: ArgumentType.NOTE,
-                                defaultValue: 48
+                                defaultValue: 60
+                            },
+                            BEATS: {
+                                type: ArgumentType.NUMBER,
+                                defaultValue: 0.25
                             }
                         }
                     },
@@ -634,17 +656,23 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      * @param {object} args - the block's arguments.
      * @param {BlockUtility} util - utility object provided by the runtime.
      */
-    playNote (args, util) {
-        const note = Cast.toNumber(args.NOTE);
-        log.info(`[playNote] note: ${note}`);
+    playNoteForBeats (args, util) {
         if (util.stackTimerNeedsInit()) {
-            const duration = 0.5;
-            clearTimeout(this._playNoteTimeout);
-            this._playNoteTimeout = setTimeout(() => {
-                this._peripheral.setPwmOutput(PinsMap.Buzzer, 0);
-            }, duration * 1000);
+            let note = Cast.toNumber(args.NOTE);
+            log.info(`[playNote] note: ${note}`);
+            note = MathUtil.clamp(note,
+                OpenBlockRoboProStationDevice.MIDI_NOTE_RANGE.min, OpenBlockRoboProStationDevice.MIDI_NOTE_RANGE.max);
+            let beats = Cast.toNumber(args.BEATS);
+            beats = this._clampBeats(beats);
+            // If the duration is 0, do not play the note. In Scratch 2.0, "play drum for 0 beats" plays the drum,
+            // but "play note for 0 beats" is silent.
+            if (beats === 0) return;
+
+            const durationSec = this._beatsToSec(beats);
+            const duration = Math.max(0, 1000 * Cast.toNumber(durationSec));
             util.startStackTimer(duration);
-            this._peripheral.setPwmOutput(PinsMap.Buzzer, note);
+            this._playNote(note, duration);
+            util.yield();
         } else if (!util.stackTimerFinished()) {
             util.yield();
         }
@@ -668,6 +696,18 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
         return this._peripheral.readDigitalPin(args.PIN);
     }
 
+    /**
+     * Get the current tempo.
+     * @return {number} - the current tempo, in beats per minute.
+     */
+    getTempo () {
+        const stage = this.runtime.getTargetForStage();
+        if (stage) {
+            return stage.tempo;
+        }
+        return 60;
+    }
+
     _updateShiftRegister () {
         this._peripheral.setPinMode(PinsMap.LatchLED, Mode.Output);
         this._peripheral.setDigitalOutput(PinsMap.LatchLED, Level.Low);
@@ -687,6 +727,36 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
         }
         this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low);
         this._peripheral.setDigitalOutput(PinsMap.LatchLED, Level.High);
+    }
+
+    /**
+     * Clamp a duration in beats to the allowed min and max duration.
+     * @param  {number} beats - a duration in beats.
+     * @return {number} - the clamped duration.
+     * @private
+     */
+    _clampBeats (beats) {
+        return MathUtil.clamp(beats, OpenBlockRoboProStationDevice.BEAT_RANGE.min,
+            OpenBlockRoboProStationDevice.BEAT_RANGE.max);
+    }
+
+    /**
+     * Convert a number of beats to a number of seconds, using the current tempo.
+     * @param  {number} beats - number of beats to convert to secs.
+     * @return {number} seconds - number of seconds `beats` will last.
+     * @private
+     */
+    _beatsToSec (beats) {
+        return (60 / this.getTempo()) * beats;
+    }
+
+    _playNote (note, duration) {
+        const frequency = Math.max(0, 440 * (2 ** ((Cast.toNumber(note) - 69) / 12)));
+        clearTimeout(this._playNoteTimeout);
+        this._playNoteTimeout = setTimeout(() => {
+            this._peripheral.stopToneOutput(PinsMap.Buzzer);
+        }, duration);
+        this._peripheral.setToneOutput(PinsMap.Buzzer, frequency);
     }
 }
 

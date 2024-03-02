@@ -571,6 +571,28 @@ class ArduinoPeripheral{
             this._firmata.servoWrite(pin, value);
         }
     }
+
+    /**
+     * @param {PIN} pin - the pin to set.
+     * @param {number} frequency - tone frequency to set.
+     */
+    setToneOutput (pin, frequency) {
+        if (this.isReady()) {
+            pin = this.parsePin(pin);
+            this._firmata.buzzerTone(pin, frequency);
+        }
+    }
+
+    /**
+     * @param {PIN} pin - the pin to set.
+     * @param {LEVEL} level - the pin level to set.
+     */
+    stopToneOutput (pin) {
+        if (this.isReady()) {
+            pin = this.parsePin(pin);
+            this._firmata.buzzerNoTone(pin);
+        }
+    }
 }
 
 module.exports = ArduinoPeripheral;
