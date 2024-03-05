@@ -101,6 +101,11 @@ const PinsMap = {
     LatchLED: Pins.A5
 };
 
+const IN_SENSOR_MIN = 0;
+const IN_SENSOR_MAX = 1023;
+const OUT_SENSOR_MIN = 0;
+const OUT_SENSOR_MAX = 100;
+
 /**
  * Manage communication with an Arduino Nano peripheral over a OpenBlock Link client socket.
  */
@@ -502,9 +507,9 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         }
                     },
                     {
-                        opcode: 'readAnalogPin',
+                        opcode: 'readAnalogSensor',
                         text: formatMessage({
-                            id: 'roboPro.station.readAnalogPin',
+                            id: 'roboPro.station.readAnalogSensor',
                             default: 'read pin [PIN]',
                             description: 'roboProStation read analog pin'
                         }),
@@ -681,10 +686,11 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     /**
      * Read sensor.
      * @param {object} args - the block's arguments.
-     * @return {number} - analog value fo the pin.
+     * @return {Promise} - a Promise that resolves when read from peripheral.
      */
     readSensor (args) {
-        return this._peripheral.readAnalogPin(args.PIN);
+        const promise = this._peripheral.readAnalogPin(args.PIN);
+        return promise.then(value => this._mapSensorValue(value));
     }
 
     /**
@@ -694,6 +700,16 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      */
     readButton (args) {
         return this._peripheral.readDigitalPin(args.PIN);
+    }
+
+    /**
+     * Read analog pin.
+     * @param {object} args - the block's arguments.
+     * @return {Promise} - a Promise that resolves when read from peripheral.
+     */
+    readAnalogSensor (args) {
+        const promise = this._peripheral.readAnalogPin(args.PIN);
+        return promise.then(value => this._mapSensorValue(value));
     }
 
     /**
@@ -757,6 +773,17 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
             this._peripheral.stopToneOutput(PinsMap.Buzzer);
         }, duration);
         this._peripheral.setToneOutput(PinsMap.Buzzer, frequency);
+    }
+
+    /**
+     * Re-maps sensor value from the 0...1023 range to the 0...100 range.
+     * @param {number} value - value from the sensor.
+     * @return {number} re-mapped value
+     * @private
+     */
+    _mapSensorValue (value) {
+        return ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
+            OUT_SENSOR_MIN;
     }
 }
 

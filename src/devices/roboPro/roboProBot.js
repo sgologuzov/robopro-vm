@@ -88,19 +88,29 @@ const PinsMap = {
     LeftMotorReverse: Pins.D4,
     LeftMotorPwm: Pins.D5,
     RightMotorPwm: Pins.D6,
-    RightMotorReverse: Pins.D7
+    RightMotorReverse: Pins.D7,
     // Keyestudio
     /*
     LeftMotorReverse: Pins.D12,
     LeftMotorPwm: Pins.D3,
     RightMotorPwm: Pins.D11,
-    RightMotorReverse: Pins.D13
-     */
+    RightMotorReverse: Pins.D13,
+    */
+    // Common
+    A0: Pins.A0,
+    A1: Pins.A1,
+    A2: Pins.A2,
+    A3: Pins.A3
 };
 
 const MIN_MOTOR_POWER = 0;
 const MAX_MOTOR_POWER = 255;
-const DEGREE_RATIO = 20;
+const DEGREE_RATIO = 120;
+const IN_SENSOR_MIN = 0;
+const IN_SENSOR_MAX = 1023;
+const OUT_SENSOR_MIN = 0;
+const OUT_SENSOR_MAX = 100;
+
 
 /**
  * Manage communication with a Arduino Nano peripheral over a OpenBlock Link client socket.
@@ -146,6 +156,43 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                     description: 'label for backward direction'
                 }),
                 value: Direction.Backward
+            }
+        ];
+    }
+
+    get SENSORS_MENU () {
+        return [
+            {
+                text: formatMessage({
+                    id: 'roboPro.sensorsMenu.sensorA0',
+                    default: 'A0',
+                    description: 'label for A0 sensor'
+                }),
+                value: PinsMap.A0
+            },
+            {
+                text: formatMessage({
+                    id: 'roboPro.sensorsMenu.sensorA1',
+                    default: 'A1',
+                    description: 'label for A1 sensor'
+                }),
+                value: PinsMap.A1
+            },
+            {
+                text: formatMessage({
+                    id: 'roboPro.sensorsMenu.sensorA2',
+                    default: 'A2',
+                    description: 'label for A2 sensor'
+                }),
+                value: PinsMap.A2
+            },
+            {
+                text: formatMessage({
+                    id: 'roboPro.sensorsMenu.sensorA3',
+                    default: 'A3',
+                    description: 'label for A3 sensor'
+                }),
+                value: PinsMap.A3
             }
         ];
     }
@@ -269,6 +316,40 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                         }
                     },
                     {
+                        opcode: 'setMotorsPower',
+                        text: formatMessage({
+                            id: 'roboPro.bot.setMotorsPower',
+                            default: 'set motors power [POWER] %',
+                            description: 'Set motors power'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            POWER: {
+                                type: ArgumentType.NUMBER,
+                                defaultValue: 30
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'setMotorsPowerLR',
+                        text: formatMessage({
+                            id: 'roboPro.bot.setMotorsPowerLR',
+                            default: 'set motors power L [POWER_LEFT] R [POWER_RIGHT] %',
+                            description: 'Set motors power separately'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            POWER_LEFT: {
+                                type: ArgumentType.NUMBER,
+                                defaultValue: 30
+                            },
+                            POWER_RIGHT: {
+                                type: ArgumentType.NUMBER,
+                                defaultValue: 30
+                            }
+                        }
+                    },
+                    {
                         opcode: 'setPowerAndDirection',
                         text: formatMessage({
                             id: 'roboPro.bot.setPowerAndDirection',
@@ -299,47 +380,28 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                         }
                     },
                     {
-                        opcode: 'readAnalogPin',
+                        opcode: 'readSensor',
                         text: formatMessage({
-                            id: 'roboPro.bot.readAnalogPin',
-                            default: 'read pin [PIN]',
-                            description: 'roboProBot read analog pin'
+                            id: 'roboPro.bot.readSensor',
+                            default: 'read sensor [PIN]',
+                            description: 'Read sensor value'
                         }),
                         blockType: BlockType.REPORTER,
                         arguments: {
                             PIN: {
                                 type: ArgumentType.STRING,
-                                menu: 'analogPins',
-                                defaultValue: Pins.A0
+                                menu: 'sensors',
+                                defaultValue: PinsMap.A0
                             }
                         }
                     }
                 ],
                 menus: {
-                    analogPins: {
-                        items: this.ANALOG_PINS_MENU
-                    },
                     directions: {
                         items: this.DIRECTIONS_MENU
                     },
-                    pins: {
-                        items: this.PINS_MENU
-                    },
-                    mode: {
-                        items: this.MODE_MENU
-                    },
-                    level: {
-                        acceptReporters: true,
-                        items: this.LEVEL_MENU
-                    },
-                    pwmPins: {
-                        items: this.PWM_PINS_MENU
-                    },
-                    interruptPins: {
-                        items: this.INTERRUPT_PINS_MENU
-                    },
-                    interruptMode: {
-                        items: this.INTERRUP_MODE_MENU
+                    sensors: {
+                        items: this.SENSORS_MENU
                     }
                 }
             }
@@ -385,8 +447,8 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      * @param {object} util - utility object provided by the runtime.
      */
     turnRight (args, util) {
-        this._directionLeft = Direction.Backward;
-        this._directionRight = Direction.Forward;
+        this._directionLeft = Direction.Forward;
+        this._directionRight = Direction.Backward;
         this._motorsOnForSeconds(args.DEGREES / DEGREE_RATIO, util);
     }
 
@@ -396,9 +458,27 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      * @param {object} util - utility object provided by the runtime.
      **/
     turnLeft (args, util) {
-        this._directionLeft = Direction.Forward;
-        this._directionRight = Direction.Backward;
+        this._directionLeft = Direction.Backward;
+        this._directionRight = Direction.Forward;
         this._motorsOnForSeconds(args.DEGREES / DEGREE_RATIO, util);
+    }
+
+    /**
+     * Set motors power.
+     * @param {object} args - the block's arguments.
+     **/
+    setMotorsPower (args) {
+        this._powerLeft = this._convertPercentPower(args.POWER);
+        this._powerRight = this._convertPercentPower(args.POWER);
+    }
+
+    /**
+     * Set motors power separately.
+     * @param {object} args - the block's arguments.
+     **/
+    setMotorsPowerLR (args) {
+        this._powerLeft = this._convertPercentPower(args.POWER_LEFT);
+        this._powerRight = this._convertPercentPower(args.POWER_RIGHT);
     }
 
     /**
@@ -410,6 +490,16 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
         this._directionRight = args.DIRECTION_RIGHT;
         this._powerLeft = this._convertPercentPower(args.POWER_LEFT);
         this._powerRight = this._convertPercentPower(args.POWER_RIGHT);
+    }
+
+    /**
+     * Read sensor.
+     * @param {object} args - the block's arguments.
+     * @return {Promise} - a Promise that resolves when read from peripheral.
+     */
+    readSensor (args) {
+        const promise = this._peripheral.readAnalogPin(args.PIN);
+        return promise.then(value => this._mapSensorValue(value));
     }
 
     _motorsOnForSeconds (durationSec, util) {
@@ -482,6 +572,17 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
         if (timeElapsed < util.stackFrame.duration * 1000) {
             util.yield();
         }
+    }
+
+    /**
+     * Re-maps sensor value from the 0...1023 range to the 0...100 range.
+     * @param {number} value - value from the sensor.
+     * @return {number} re-mapped value
+     * @private
+     */
+    _mapSensorValue (value) {
+        return ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
+            OUT_SENSOR_MIN;
     }
 }
 
