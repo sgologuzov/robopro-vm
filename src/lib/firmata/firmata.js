@@ -1749,7 +1749,7 @@ class Firmata extends Emitter {
 
     // see http://firmata.org/wiki/Proposals#OneWire_Proposal
     [symbolSendOneWireRequest] (pin, subcommand, device, numBytesToRead, correlationId,
-                                delay, dataToWrite, event, callback) {
+        delay, dataToWrite, event, callback) {
         const bytes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
         if (device || numBytesToRead || correlationId || delay || dataToWrite) {
