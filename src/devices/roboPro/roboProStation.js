@@ -21,8 +21,10 @@ const log = require('../../util/log');
  * @readonly
  */
 const PNPID_LIST = [
+    // Arduino UNO
+    'USB\\VID_2341&PID_0043',
     // For chinese clones that use CH340
-    'USB\\VID_2341&PID_0043'
+    'USB\\VID_1A86&PID_7523'
 ];
 
 /**
@@ -699,6 +701,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      * @return {Promise} - true if read high level, false if read low level.
      */
     readButton (args) {
+        this._peripheral.setPinMode(args.PIN, Mode.Input);
         return this._peripheral.readDigitalPin(args.PIN);
     }
 

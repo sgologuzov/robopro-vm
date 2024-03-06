@@ -19,8 +19,10 @@ const Cast = require('../../util/cast');
  * @readonly
  */
 const PNPID_LIST = [
+    // Arduino UNO
+    'USB\\VID_2341&PID_0043',
     // For chinese clones that use CH340
-    'USB\\VID_2341&PID_0043'
+    'USB\\VID_1A86&PID_7523'
 ];
 
 /**
