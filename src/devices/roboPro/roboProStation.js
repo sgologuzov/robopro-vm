@@ -95,7 +95,7 @@ const PinsMap = {
     Button5: Pins.D11,
     Button4: Pins.D12,
     ExtSensor1: Pins.D13,
-    ExtSensor3: Pins.A0,
+    TempSensor: Pins.A0,
     ExtSensor2: Pins.A1,
     Slider: Pins.A2,
     SoundSensor: Pins.A3,
@@ -107,6 +107,9 @@ const IN_SENSOR_MIN = 0;
 const IN_SENSOR_MAX = 1023;
 const OUT_SENSOR_MIN = 0;
 const OUT_SENSOR_MAX = 100;
+const TEMP_VOLTS_PER_DEGREE = 0.02; // 0.02 for TMP37, 0.01 for TMP35/36
+const TEMP_OUTPUT_VOLTAGE = 0.25; // 0.25 for TMP35, 0.75 for TMP36, 0.5 for TMP37
+const TEMP_OFFSET_VALUE = TEMP_OUTPUT_VOLTAGE - (25 * TEMP_VOLTS_PER_DEGREE); // calculating the offset for 0 °C
 
 /**
  * Manage communication with an Arduino Nano peripheral over a OpenBlock Link client socket.
@@ -335,6 +338,14 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                     description: 'label for sound sensor'
                 }),
                 value: PinsMap.SoundSensor
+            },
+            {
+                text: formatMessage({
+                    id: 'roboPro.sensorsMenu.tempSensor',
+                    default: 'temperature sensor',
+                    description: 'label for temperature sensor'
+                }),
+                value: PinsMap.TempSensor
             },
             {
                 text: formatMessage({
@@ -692,7 +703,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      */
     readSensor (args) {
         const promise = this._peripheral.readAnalogPin(args.PIN);
-        return promise.then(value => this._mapSensorValue(value));
+        return promise.then(value => this._mapSensorValue(args.PIN, value));
     }
 
     /**
@@ -711,8 +722,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      * @return {Promise} - a Promise that resolves when read from peripheral.
      */
     readAnalogSensor (args) {
-        const promise = this._peripheral.readAnalogPin(args.PIN);
-        return promise.then(value => this._mapSensorValue(value));
+        return this._peripheral.readAnalogPin(args.PIN);
     }
 
     /**
@@ -780,11 +790,21 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
 
     /**
      * Re-maps sensor value from the 0...1023 range to the 0...100 range.
+     * @param {Pins} pin - sensor pin
      * @param {number} value - value from the sensor.
      * @return {number} re-mapped value
      * @private
      */
-    _mapSensorValue (value) {
+    _mapSensorValue (pin, value) {
+        switch (pin) {
+        case PinsMap.TempSensor: {
+            const volts = value * 5.0 / 1024.0;
+            return (volts - TEMP_OFFSET_VALUE) / TEMP_VOLTS_PER_DEGREE;
+        }
+        case PinsMap.LightSensor:
+            value = IN_SENSOR_MAX - value;
+            break;
+        }
         return ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
             OUT_SENSOR_MIN;
     }
