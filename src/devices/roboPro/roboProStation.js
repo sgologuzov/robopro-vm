@@ -799,14 +799,15 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
         switch (pin) {
         case PinsMap.TempSensor: {
             const volts = value * 5.0 / 1024.0;
-            return (volts - TEMP_OFFSET_VALUE) / TEMP_VOLTS_PER_DEGREE;
+            return Math.round((volts - TEMP_OFFSET_VALUE) / TEMP_VOLTS_PER_DEGREE);
         }
         case PinsMap.LightSensor:
             value = IN_SENSOR_MAX - value;
             break;
         }
-        return ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
+        value = ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
             OUT_SENSOR_MIN;
+        return Math.round(value);
     }
 }
 

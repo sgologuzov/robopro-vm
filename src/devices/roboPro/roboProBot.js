@@ -606,8 +606,9 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
             value = IN_SENSOR_MAX - value;
             break;
         }
-        return ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
+        value = ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
             OUT_SENSOR_MIN;
+        return Math.round(value);
     }
 }
 
