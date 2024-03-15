@@ -102,7 +102,9 @@ const PinsMap = {
     A0: Pins.A0,
     A1: Pins.A1,
     A2: Pins.A2,
-    A3: Pins.A3
+    A3: Pins.A3,
+    A4: Pins.A4,
+    A5: Pins.A5
 };
 
 const MIN_MOTOR_POWER = 0;
@@ -113,9 +115,8 @@ const IN_SENSOR_MAX = 1023;
 const OUT_SENSOR_MIN = 0;
 const OUT_SENSOR_MAX = 100;
 
-
 /**
- * Manage communication with a Arduino Nano peripheral over a OpenBlock Link client socket.
+ * Manage communication with an Arduino Nano peripheral over a OpenBlock Link client socket.
  */
 class RoboProBot extends ArduinoPeripheral {
     /**
@@ -195,6 +196,22 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                     description: 'label for A3 sensor'
                 }),
                 value: PinsMap.A3
+            },
+            {
+                text: formatMessage({
+                    id: 'roboPro.sensorsMenu.sensorA4',
+                    default: 'A4',
+                    description: 'label for A4 sensor'
+                }),
+                value: PinsMap.A4
+            },
+            {
+                text: formatMessage({
+                    id: 'roboPro.sensorsMenu.sensorA5',
+                    default: 'A5',
+                    description: 'label for A5 sensor'
+                }),
+                value: PinsMap.A5
             }
         ];
     }
@@ -501,7 +518,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      */
     readSensor (args) {
         const promise = this._peripheral.readAnalogPin(args.PIN);
-        return promise.then(value => this._mapSensorValue(value));
+        return promise.then(value => this._mapSensorValue(args.PIN, value));
     }
 
     _motorsOnForSeconds (durationSec, util) {
@@ -578,11 +595,17 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
 
     /**
      * Re-maps sensor value from the 0...1023 range to the 0...100 range.
+     * @param {Pins} pin - sensor pin
      * @param {number} value - value from the sensor.
      * @return {number} re-mapped value
      * @private
      */
-    _mapSensorValue (value) {
+    _mapSensorValue (pin, value) {
+        switch (pin) {
+        case PinsMap.A3:
+            value = IN_SENSOR_MAX - value;
+            break;
+        }
         return ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
             OUT_SENSOR_MIN;
     }
