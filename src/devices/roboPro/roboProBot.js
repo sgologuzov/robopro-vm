@@ -82,7 +82,9 @@ const Mode = {
 
 const Direction = {
     Forward: 'FORWARD',
-    Backward: 'BACKWARD'
+    Backward: 'BACKWARD',
+    TurnLeft: 'TURN_LEFT',
+    TurnRight: 'TURN_RIGHT'
 };
 
 const PinsMap = {
@@ -159,6 +161,22 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                     description: 'label for backward direction'
                 }),
                 value: Direction.Backward
+            },
+            {
+                text: formatMessage({
+                    id: 'roboPro.directionsMenu.turnLeft',
+                    default: 'turn left',
+                    description: 'label for turn left direction'
+                }),
+                value: Direction.TurnLeft
+            },
+            {
+                text: formatMessage({
+                    id: 'roboPro.directionsMenu.turnRight',
+                    default: 'turn right',
+                    description: 'label for turn right direction'
+                }),
+                value: Direction.TurnRight
             }
         ];
     }
@@ -456,8 +474,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      * @param {object} args - the block's arguments.
      */
     setDirectionTo (args) {
-        this._directionLeft = args.DIRECTION;
-        this._directionRight = args.DIRECTION;
+        this._setDirection(args.DIRECTION);
     }
 
     /**
@@ -466,8 +483,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      * @param {object} util - utility object provided by the runtime.
      */
     turnRight (args, util) {
-        this._directionLeft = Direction.Forward;
-        this._directionRight = Direction.Backward;
+        this._setDirection(Direction.TurnRight);
         this._motorsOnForSeconds(args.DEGREES / DEGREE_RATIO, util);
     }
 
@@ -477,8 +493,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      * @param {object} util - utility object provided by the runtime.
      **/
     turnLeft (args, util) {
-        this._directionLeft = Direction.Backward;
-        this._directionRight = Direction.Forward;
+        this._setDirection(Direction.TurnLeft);
         this._motorsOnForSeconds(args.DEGREES / DEGREE_RATIO, util);
     }
 
@@ -519,6 +534,28 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
     readSensor (args) {
         const promise = this._peripheral.readAnalogPin(args.PIN);
         return promise.then(value => this._mapSensorValue(args.PIN, value));
+    }
+
+    /**
+     * Set direction
+     * @param {Direction} direction - direction
+     */
+    _setDirection (direction) {
+        switch (direction) {
+        case Direction.Forward:
+        case Direction.Backward:
+            this._directionLeft = direction;
+            this._directionRight = direction;
+            break;
+        case Direction.TurnRight:
+            this._directionLeft = Direction.Forward;
+            this._directionRight = Direction.Backward;
+            break;
+        case Direction.TurnLeft:
+            this._directionLeft = Direction.Backward;
+            this._directionRight = Direction.Forward;
+            break;
+        }
     }
 
     _motorsOnForSeconds (durationSec, util) {
