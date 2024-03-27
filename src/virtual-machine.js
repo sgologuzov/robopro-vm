@@ -258,7 +258,7 @@ class VirtualMachine extends EventEmitter {
         this.runtime.dispose();
         this.editingTarget = null;
         this.emitTargetsUpdate(false /* Don't emit project change */);
-        this.extensionManager.clearDevice();
+        this.extensionManager.clearDevices();
     }
 
     /**

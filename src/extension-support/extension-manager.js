@@ -121,17 +121,17 @@ class ExtensionManager {
 
         /**
          * Set of loaded extension URLs/IDs (equivalent for built-in extensions).
-         * @type {Set.<string>}
+         * @type {Map.<string, any>}
          * @private
          */
         this._loadedExtensions = new Map();
 
         /**
          * Set of loaded device URLs/IDs (equivalent for built-in devices).
-         * @type {Set.<string>}
+         * @type {Map.<string, string>}
          * @private
          */
-        this._loadedDevice = new Map();
+        this._loadedDevices = new Map();
 
         /**
          * Map of extensions.
@@ -166,11 +166,11 @@ class ExtensionManager {
      * Check whether an device is registered or is in the process of loading. This is intended to control loading or
      * adding device so it may return `true` before the device is ready to be used. Use the promise returned by
      * `loadDeviceURL` if you need to wait until the device is truly ready.
-     * @param {string} deviceID - the ID of the device.
+     * @param {string} deviceId - the ID of the device.
      * @returns {boolean} - true if loaded, false otherwise.
      */
-    isDeviceLoaded (deviceID) {
-        return this._loadedDevice.has(deviceID);
+    isDeviceLoaded (deviceId) {
+        return this._loadedDevices.has(deviceId);
     }
 
     /**
@@ -261,9 +261,9 @@ class ExtensionManager {
      * @returns {Promise} resolved once the device is loaded and initialized or rejected on failure
      */
     loadDeviceURL (deviceId, deviceType, pnpidList) {
-        // if no deviceid return
+        // if no deviceId return
         if (deviceId === 'null') {
-            this.clearDevice();
+            this.clearDevice(deviceId);
             return Promise.resolve();
         }
 
@@ -277,18 +277,13 @@ class ExtensionManager {
             }
 
             // Try to disconnect the old device before change device.
-            this.runtime.disconnectPeripheral(this.runtime.getDeviceId());
-
-            this.runtime.setDeviceId(deviceId);
-            this.runtime.setDeviceType(deviceType);
-            this.runtime.setPnpIdList(pnpidList);
+            this.runtime.disconnectPeripheral(deviceId);
+            this.runtime.addDevice(deviceId, deviceType, pnpidList);
             this.runtime.clearMonitor();
             const device = builtinDevices[realDeviceId]();
             const deviceInstance = new device(this.runtime, deviceId);
             const serviceName = this._registerInternalExtension(deviceInstance);
-            this._loadedDevice.clear();
-
-            this._loadedDevice.set(deviceId, serviceName);
+            this._loadedDevices.set(deviceId, serviceName);
 
             // Clear current extentions.
             this.runtime.clearScratchExtension();
@@ -303,17 +298,13 @@ class ExtensionManager {
 
     /**
      * Clear curent device
+     * @param {string} deviceId - the URL for the device to load OR the ID of an internal device
      */
-    clearDevice () {
-        this.runtime.disconnectPeripheral(this.runtime.getDeviceId());
-
-        const deviceId = this.runtime.getDeviceId();
-
-        this.runtime.setDeviceId(null);
-        this.runtime.setDeviceType(null);
-        this.runtime.setPnpIdList([]);
+    clearDevice (deviceId) {
+        this.runtime.disconnectPeripheral(deviceId);
+        this.runtime.removeDevice(deviceId);
         this.runtime.clearMonitor();
-        this._loadedDevice.clear();
+        this._loadedDevices.delete(deviceId);
 
         // Clear current extentions.
         this.runtime.clearScratchExtension();
@@ -321,6 +312,26 @@ class ExtensionManager {
         this.unloadAllDeviceExtension();
 
         this.runtime.emit(this.runtime.constructor.SCRATCH_EXTENSION_REMOVED, {deviceId});
+    }
+
+    /**
+     * Clear all devices
+     */
+    clearDevices () {
+        const deviceIds = this.runtime.getDeviceIds();
+        this.runtime.disconnectPeripherals();
+        this.runtime.removeDevices();
+        this.runtime.clearMonitor();
+        this._loadedDevices.clear();
+
+        // Clear current extentions.
+        this.runtime.clearScratchExtension();
+        this._loadedExtensions.clear();
+        this.unloadAllDeviceExtension();
+
+        for (const deviceId of deviceIds) {
+            this.runtime.emit(this.runtime.constructor.SCRATCH_EXTENSION_REMOVED, {deviceId});
+        }
     }
 
     /**
@@ -363,6 +374,7 @@ class ExtensionManager {
      * @returns {Promise} resolved once the device extension is loaded or rejected on failure
      */
     loadDeviceExtension (deviceExtensionId) {
+        console.log('[loadDeviceExtension] deviceExtensionId:', deviceExtensionId);
         return new Promise((resolve, reject) => {
             const deviceExtension = this._deviceExtensions.find(ext => ext.extensionId === deviceExtensionId);
             if (typeof deviceExtension === 'undefined') {
@@ -459,7 +471,7 @@ class ExtensionManager {
      */
     refreshBlocks () {
         const loadedExtensionsAndDevice = Array.from(this._loadedExtensions.values())
-            .concat(Array.from(this._loadedDevice.values()));
+            .concat(Array.from(this._loadedDevices.values()));
         const allPromises = loadedExtensionsAndDevice.map(serviceName =>
             dispatch.call(serviceName, 'getInfo')
                 .then(info => {
@@ -573,7 +585,8 @@ class ExtensionManager {
                 throw new Error('Invalid category id');
             }
             if (id.deviceId) {
-                category.id = `${this.runtime.getDeviceType()}_${category.id}`;
+                const deviceType = this.runtime.getDevice(id.deviceId);
+                category.id = `${deviceType}_${category.id}`;
             }
             category.name = category.name || category.id;
             category.blocks = category.blocks || [];
