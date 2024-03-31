@@ -85,7 +85,9 @@ class BLE extends JSONRPC {
         }
 
         // Sets connection status icon to orange
-        this._runtime.emit(this._runtime.constructor.PERIPHERAL_DISCONNECTED);
+        this._runtime.emit(this._runtime.constructor.PERIPHERAL_DISCONNECTED, {
+            deviceId: this._deviceId
+        });
     }
 
     /**

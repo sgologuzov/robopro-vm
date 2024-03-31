@@ -61,7 +61,9 @@ class Serialport extends JSONRPC {
         this.sendRemoteRequest('connect', {peripheralId: id, peripheralConfig: config})
             .then(() => {
                 this._connected = true;
-                this._runtime.emit(this._runtime.constructor.PERIPHERAL_CONNECTED);
+                this._runtime.emit(this._runtime.constructor.PERIPHERAL_CONNECTED, {
+                    deviceId: this._deviceId
+                });
                 if (this._connectCallback) {
                     this._connectCallback();
                 }
@@ -88,7 +90,9 @@ class Serialport extends JSONRPC {
         }
 
         // Sets connection status icon to orange
-        this._runtime.emit(this._runtime.constructor.PERIPHERAL_DISCONNECTED);
+        this._runtime.emit(this._runtime.constructor.PERIPHERAL_DISCONNECTED, {
+            deviceId: this._deviceId
+        });
     }
 
     /**

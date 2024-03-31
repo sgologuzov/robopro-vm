@@ -554,12 +554,12 @@ const serialize = function (runtime, targetId) {
 
     obj.monitors = serializeMonitors(runtime.getMonitorState());
 
-    obj.device = runtime.getDevice();
+    obj.devices = runtime.getDeviceIds();
 
     // If no device setting means this project is a pure scratch project, so we convert the procedures blocks which
     // is not supported by scratch3 to the types supported by scratch3, so that scratch3 can open the pure scratch
     // project created by openblock.
-    if (obj.device === null) {
+    if (obj.devices.size === 0) {
         obj.targets = obj.targets.map(target => {
             target.blocks = Object.fromEntries(
                 Object.entries(target.blocks).map(([id, block]) => {

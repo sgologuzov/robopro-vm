@@ -128,17 +128,17 @@ class ExtensionManager {
 
         /**
          * Set of loaded extension URLs/IDs (equivalent for built-in extensions).
-         * @type {Set.<string>}
+         * @type {Map.<string, any>}
          * @private
          */
         this._loadedExtensions = new Map();
 
         /**
          * Set of loaded device URLs/IDs (equivalent for built-in devices).
-         * @type {Set.<string>}
+         * @type {Map.<string, string>}
          * @private
          */
-        this._loadedDevice = new Map();
+        this._loadedDevices = new Map();
 
         /**
          * Map of device extensions that can be loaded.
@@ -173,11 +173,11 @@ class ExtensionManager {
      * Check whether an device is registered or is in the process of loading. This is intended to control loading or
      * adding device so it may return `true` before the device is ready to be used. Use the promise returned by
      * `loadDeviceURL` if you need to wait until the device is truly ready.
-     * @param {string} deviceID - the ID of the device.
+     * @param {string} deviceId - the ID of the device.
      * @returns {boolean} - true if loaded, false otherwise.
      */
-    isDeviceLoaded (deviceID) {
-        return this._loadedDevice.has(deviceID);
+    isDeviceLoaded (deviceId) {
+        return this._loadedDevices.has(deviceId);
     }
 
     /**
@@ -320,16 +320,13 @@ class ExtensionManager {
             }
 
             // Try to disconnect the old device before change device.
-            this.runtime.disconnectPeripheral(this.runtime.getDevice().deviceId);
-
-            this.runtime.setDevice({deviceId: deviceId, type: type, pnpIdList: pnpidList});
+            this.runtime.disconnectPeripheral(deviceId);
+            this.runtime.addDevice(deviceId, type, pnpidList);
             this.runtime.clearMonitor();
             const dev = builtinDevices[realDeviceId]();
             const deviceInstance = new dev(this.runtime, deviceId);
             const serviceName = this._registerInternalExtension(deviceInstance);
-            this._loadedDevice.clear();
-
-            this._loadedDevice.set(deviceId, serviceName);
+            this._loadedDevices.set(deviceId, serviceName);
 
             // Clear current extentions.
             this.clearExtensions();
@@ -344,20 +341,36 @@ class ExtensionManager {
     /**
      * Clear curent device
      */
-    clearDevice () {
-        this.runtime.disconnectPeripheral(this.runtime.getDevice().deviceId);
-
-        const deviceId = this.runtime.getDevice().deviceId;
-
-        this.runtime.clearDevice();
+    clearDevice (deviceId) {
+        this.runtime.disconnectPeripheral(deviceId);
+        this.runtime.removeDevice(deviceId);
         this.runtime.clearMonitor();
-        this._loadedDevice.clear();
+        this._loadedDevices.delete(deviceId);
 
         // Clear current extentions.
         this.clearExtensions();
         this.clearDeviceExtension();
 
         this.runtime.emit(this.runtime.constructor.SCRATCH_EXTENSION_REMOVED, {deviceId});
+    }
+
+    /**
+     * Clear all devices
+     */
+    clearDevices () {
+        const deviceIds = this.runtime.getDeviceIds();
+        this.runtime.disconnectPeripherals();
+        this.runtime.removeDevices();
+        this.runtime.clearMonitor();
+        this._loadedDevices.clear();
+
+        // Clear current extentions.
+        this.clearExtensions();
+        this.clearDeviceExtension();
+
+        for (const deviceId of deviceIds) {
+            this.runtime.emit(this.runtime.constructor.SCRATCH_EXTENSION_REMOVED, {deviceId});
+        }
     }
 
     /**
@@ -499,7 +512,7 @@ class ExtensionManager {
      */
     refreshBlocks () {
         const allServiceName = Array.from(this._loadedExtensions.values())
-            .concat(Array.from(this._loadedDevice.values()));
+            .concat(Array.from(this._loadedDevices.values()));
         const allPromises = allServiceName.map(serviceName =>
             dispatch.call(serviceName, 'getInfo')
                 .then(info => {
@@ -613,7 +626,8 @@ class ExtensionManager {
                 throw new Error('Invalid category id');
             }
             if (id.deviceId) {
-                category.id = `${this.runtime.getDevice().type}_${category.id}`;
+                const device = this.runtime.getDevice(id.deviceId);
+                category.id = `${device.type}_${category.id}`;
             }
             category.name = category.name || category.id;
             category.blocks = category.blocks || [];

@@ -283,15 +283,15 @@ class Runtime extends EventEmitter {
 
         /**
          * Currently program mode.
-         * @type {bool}
+         * @type {boolean}
          */
         this._isRealtimeMode = true;
 
         /**
-         * Currently selected device.
-         * @type {?object}
+         * Currently selected devices.
+         * @type {Map}
          */
-        this._device = {deviceId: null, type: null, pnpIdList: []};
+        this._devices = new Map();
 
         /**
          * Currently device realtime firmware serialport baudrate.
@@ -301,7 +301,7 @@ class Runtime extends EventEmitter {
 
         /**
          * Map of loaded device extensions.
-         * @type {Set.<string>}
+         * @type {Map.<string, any>}
          */
         this._loadedDeviceExtensions = new Map();
 
@@ -325,7 +325,7 @@ class Runtime extends EventEmitter {
         this._primitives = {};
 
         /**
-         * Map to look up all block (except devoce block) information by extended opcode.
+         * Map to look up all block (except device block) information by extended opcode.
          * @type {Array.<CategoryInfo>}
          * @private
          */
@@ -1071,7 +1071,7 @@ class Runtime extends EventEmitter {
         const {extensionId, deviceId} = id;
 
         if (deviceId) {
-            this._deviceBlockInfo = [];
+            this._deviceBlockInfo = this._deviceBlockInfo.filter(info => !info.id.endsWith(deviceId));
         }
         const categoryInfoArray = extensionInfo.map(category => {
             const categoryInfo = {
@@ -1114,8 +1114,8 @@ class Runtime extends EventEmitter {
             return categoryInfo;
         });
         // send original device id but not real deivce id.
-        const originalDeviceId = deviceId ? this._device.deviceId : null;
-        this.emit(Runtime.SCRATCH_EXTENSION_ADDED, {extensionId, deviceId: originalDeviceId, categoryInfoArray});
+        // const originalDeivceId = deviceId ? this._deviceId : null;
+        this.emit(Runtime.SCRATCH_EXTENSION_ADDED, {extensionId, deviceId, categoryInfoArray});
     }
 
     /**
@@ -1131,7 +1131,6 @@ class Runtime extends EventEmitter {
             if (categoryInfo) {
                 categoryInfo.name = maybeFormatMessage(category.name);
                 this._fillExtensionCategory(categoryInfo, category);
-
                 categoryInfoArray.push(categoryInfo);
             }
         });
@@ -1714,7 +1713,7 @@ class Runtime extends EventEmitter {
             _loadedDeviceExtensionsInfo.push({id: id, xml: value.xml});
         });
 
-        if (this._device.deviceId === null) {
+        if (this._devices.size === 0) {
             return this.generateXMLfromBlockInfo(target, this._blockInfo);
         } else if (this.isRealtimeMode()) {
             return this.generateXMLfromBlockInfo(target, this._deviceBlockInfo.concat(this._blockInfo));
@@ -1790,10 +1789,15 @@ class Runtime extends EventEmitter {
      * @param {bool} listAll - wether list all connectable device.
      */
     scanForPeripheral (deviceId, listAll) {
-        deviceId = this.analysisRealDeviceId(deviceId);
-
-        if (this.peripheralExtensions[deviceId]) {
-            this.peripheralExtensions[deviceId].scan(this._device.pnpIdList, listAll);
+        if (deviceId) {
+            deviceId = this.analysisRealDeviceId(deviceId);
+            const device = this._devices.get(deviceId);
+            if (device) {
+                const pnpIdList = device.pnpidList;
+                if (this.peripheralExtensions[deviceId]) {
+                    this.peripheralExtensions[deviceId].scan(pnpIdList, listAll);
+                }
+            }
         }
     }
 
@@ -1817,9 +1821,17 @@ class Runtime extends EventEmitter {
      */
     disconnectPeripheral (deviceId) {
         deviceId = this.analysisRealDeviceId(deviceId);
-
         if (this.peripheralExtensions[deviceId]) {
             this.peripheralExtensions[deviceId].disconnect();
+        }
+    }
+
+    /**
+     * Disconnect from the extension's connected peripherals.
+     */
+    disconnectPeripherals () {
+        for (const deviceId of this._devices.keys()) {
+            this.disconnectPeripheral(deviceId);
         }
     }
 
@@ -2528,26 +2540,53 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * Set the current selected device known by the runtime.
-     * @param {!object} device the object of device.
+     * Add a device to runtime.
+     * @param {!string} deviceId of current.
+     * @param {!string} type of deivce of current.
+     * @param {Array.<string>} pnpidList pnp id list.
      */
-    setDevice (device) {
-        this._device = device;
+    addDevice (deviceId, type, pnpidList) {
+        this._devices.set(deviceId, {deviceId, type, pnpidList});
     }
 
     /**
-     * Clear the selected device.
+     * Get the current selected device type.
+     * @param {!string} deviceId of current.
+     * @return {?DeviceType} current selected device type known by the runtime.
      */
-    clearDevice () {
-        this._device = {deviceId: null, type: null, pnpIdList: []};
+    getDevice (deviceId) {
+        return this._devices.get(deviceId);
     }
 
     /**
-     * Get the current selected device.
-     * @return {?Device} current selected device known by the runtime.
+     * Get devices.
+     * @return {?Map.<string, any>} current devices known by the runtime.
+     * */
+    getDevices () {
+        return this._devices;
+    }
+
+    /**
+     * Get ids of devices.
+     * @return {?Array.<string>} current device id list known by the runtime.
+     * */
+    getDeviceIds () {
+        return Array.from(this._devices.keys());
+    }
+
+    /**
+     * Remove device from runtime.
+     * @param {!string} deviceId of current.
      */
-    getDevice () {
-        return this._device;
+    removeDevice (deviceId) {
+        this._devices.delete(deviceId);
+    }
+
+    /**
+     * Remove all devices from runtime.
+     */
+    removeDevices () {
+        this._devices.clear();
     }
 
     /**
@@ -2656,8 +2695,10 @@ class Runtime extends EventEmitter {
     setRealtimeMode (sta) {
         if (this._isRealtimeMode !== sta){
             this._isRealtimeMode = sta;
-            if (sta && this.getPeripheralIsConnected(this._device.deviceId)) {
-                this.setPeripheralBaudrate(this._device.deviceId, this._realtimeBaudrate);
+            for (const deviceId of this._devices.keys()) {
+                if (sta && this.getPeripheralIsConnected(deviceId)) {
+                    this.setPeripheralBaudrate(deviceId, this._realtimeBaudrate);
+                }
             }
             this.emit(Runtime.PROGRAM_MODE_UPDATE, {isRealtimeMode: this._isRealtimeMode});
         }
