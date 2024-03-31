@@ -339,7 +339,8 @@ class ExtensionManager {
     }
 
     /**
-     * Clear curent device
+     * @param {string} deviceId - the device to be clear
+     * Clear device
      */
     clearDevice (deviceId) {
         this.runtime.disconnectPeripheral(deviceId);
