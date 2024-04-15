@@ -184,6 +184,9 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.PERIPHERAL_UPLOAD_SUCCESS, aborted =>
             this.emit(Runtime.PERIPHERAL_UPLOAD_SUCCESS, aborted)
         );
+        this.runtime.on(Runtime.PERIPHERAL_MONITORING_UPDATE, data =>
+            this.emit(Runtime.PERIPHERAL_MONITORING_UPDATE, data)
+        );
         this.runtime.on(Runtime.MIC_LISTENING, listening => {
             this.emit(Runtime.MIC_LISTENING, listening);
         });
@@ -365,19 +368,36 @@ class VirtualMachine extends EventEmitter {
     /**
      * Abort upload process.
      * @param {string} extensionId - the id of the extension.
-     * @return {Function} Returns a function to aboart upload code to peripheral.
+     * @return {Function} Returns a function to abort upload code to peripheral.
      */
     abortUploadToPeripheral (extensionId) {
         return this.runtime.abortUploadToPeripheral(extensionId);
     }
 
     /**
-     * Upload realtime firware to the extension's specified peripheral.
+     * Upload realtime firmware to the extension's specified peripheral.
      * @param {string} extensionId - the id of the extension.
-     * @return {Function} Returns a function to restore upload  realtime firware to peripheral.
+     * @return {Function} Returns a function to restore upload realtime firmware to peripheral.
      */
     uploadFirmwareToPeripheral (extensionId) {
         return this.runtime.uploadFirmwareToPeripheral(extensionId);
+    }
+
+    /**
+     * Enable peripheral monitoring.
+     * @param {string} extensionId - the id of the extension.
+     */
+    enablePeripheralMonitoring (extensionId) {
+        this.runtime.enablePeripheralMonitoring(extensionId);
+    }
+
+    /**
+     * Disable peripheral monitoring.
+     * @param {string} extensionId - the id of the extension.
+     */
+    disablePeripheralMonitoring (extensionId) {
+        this.runtime.requestRemoveMonitor(extensionId);
+        this.emit(Runtime.PERIPHERAL_MONITORING_UPDATE, {deviceId: extensionId, monitoring: false});
     }
 
     /**
@@ -563,6 +583,7 @@ class VirtualMachine extends EventEmitter {
      * @returns {Promise} Promise that resolves after the project has loaded
      */
     deserializeProject (projectJSON, zip) {
+        console.log('[deserializeProject] projectJSON:', projectJSON);
         // Clear the current runtime
         this.clear();
 
@@ -572,6 +593,7 @@ class VirtualMachine extends EventEmitter {
         const runtime = this.runtime;
         const deserializePromise = function () {
             const projectVersion = projectJSON.projectVersion;
+            console.log('[deserializePromise] projectVersion:', projectVersion);
             if (projectVersion === 2) {
                 const sb2 = require('./serialization/sb2');
                 return sb2.deserialize(projectJSON, runtime, false, zip);
@@ -603,7 +625,7 @@ class VirtualMachine extends EventEmitter {
                 } else if (typeof projectJSON.device === 'object') {
                     device = projectJSON.device;
                 }
-
+                console.log('[deserializePromise] device:', device);
                 return this.installDevice(targets, device, projectJSON.programMode, projectJSON.deviceExtensions);
             })
             // Step2: Install target and if there has deivce setting, set the editing target to stage incase there is
@@ -674,6 +696,7 @@ class VirtualMachine extends EventEmitter {
      */
     installDevice (targets, device, programMode = 'realtime') {
         targets = targets.filter(target => !!target);
+        console.log('[installDevice] device:', device);
 
         if (device.deviceId) {
             this.runtime.setRealtimeMode(programMode === 'realtime');

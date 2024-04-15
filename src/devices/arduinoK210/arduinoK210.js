@@ -31,7 +31,7 @@ const SERIAL_CONFIG = {
  * Configuration for arduino-cli.
  * @readonly
  */
-const DIVECE_OPT = {
+const DEVICE_OPT = {
     type: 'arduino',
     fqbn: 'Maixduino:k210:m1:toolsloc=default,clksrc=400,burn_baudrate=2000000,burn_tool_firmware=dan'
 };
@@ -146,7 +146,7 @@ class ArduinoK210 extends CommonPeripheral{
      * @param {string} originalDeviceId - the original id of the peripheral, like xxx_arduinoUno
      */
     constructor (runtime, deviceId, originalDeviceId) {
-        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DIVECE_OPT);
+        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DEVICE_OPT, Pins);
     }
 }
 

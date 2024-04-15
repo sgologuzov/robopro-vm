@@ -30,6 +30,7 @@ const Video = require('../io/video');
 
 const StringUtil = require('../util/string-util');
 const uid = require('../util/uid');
+const MonitorRecord = require('./monitor-record');
 
 const defaultBlockPackages = {
     scratch3_control: require('../blocks/scratch3_control'),
@@ -796,6 +797,14 @@ class Runtime extends EventEmitter {
      */
     static get PERIPHERAL_CONNECTION_LOST_ERROR () {
         return 'PERIPHERAL_CONNECTION_LOST_ERROR';
+    }
+
+    /**
+     * Event name for reporting that a peripheral monitoring mode has been updated.
+     * @const {string}
+     */
+    static get PERIPHERAL_MONITORING_UPDATE () {
+        return 'PERIPHERAL_MONITORING_UPDATE';
     }
 
     /**
@@ -1902,7 +1911,7 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * Upload realtime firware to the extension's specified peripheral.
+     * Upload realtime firmware to the extension's specified peripheral.
      * @param {string} deviceId - the id of the device.
      */
     uploadFirmwareToPeripheral (deviceId) {
@@ -1910,6 +1919,34 @@ class Runtime extends EventEmitter {
 
         if (this.peripheralExtensions[deviceId]) {
             this.peripheralExtensions[deviceId].uploadFirmware();
+        }
+    }
+
+    /**
+     * Enable peripheral monitoring.
+     * @param {string} deviceId - the id of the extension.
+     */
+    enablePeripheralMonitoring (deviceId) {
+        deviceId = this.analysisRealDeviceId(deviceId);
+        const device = this.peripheralExtensions[deviceId];
+        console.log('this.peripheralExtensions[deviceId]:', device);
+        if (device) {
+            const fakeMap = new Map();
+            const pins = device.pins;
+            if (pins) {
+                for (const pin in pins) {
+                    fakeMap.set(pin, 0);
+                }
+            }
+            if (!this.requestShowMonitor(deviceId)) {
+                this.requestAddMonitor(MonitorRecord({
+                    id: deviceId,
+                    mode: 'map',
+                    opcode: deviceId,
+                    value: fakeMap
+                }));
+                this.emit(Runtime.PERIPHERAL_MONITORING_UPDATE, {deviceId: deviceId, monitoring: true});
+            }
         }
     }
 
@@ -2690,7 +2727,7 @@ class Runtime extends EventEmitter {
 
     /**
      * Set whether the current program mode is realtime mode.
-     * @param {string} sta state of current program mode to set.
+     * @param {boolean} sta state of current program mode to set.
      */
     setRealtimeMode (sta) {
         if (this._isRealtimeMode !== sta){

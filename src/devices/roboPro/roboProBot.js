@@ -39,7 +39,7 @@ const SERIAL_CONFIG = {
  * Configuration for arduino-cli.
  * @readonly
  */
-const DIVECE_OPT = {
+const DEVICE_OPT = {
     type: 'arduino',
     fqbn: 'arduino:avr:uno',
     firmware: 'arduinoUno.hex'
@@ -89,17 +89,17 @@ const Direction = {
 
 const PinsMap = {
     // RoboPro
+    /*
     LeftMotorReverse: Pins.D4,
     LeftMotorPwm: Pins.D5,
     RightMotorPwm: Pins.D6,
     RightMotorReverse: Pins.D7,
+     */
     // Keyestudio
-    /*
     LeftMotorReverse: Pins.D12,
     LeftMotorPwm: Pins.D3,
     RightMotorPwm: Pins.D11,
     RightMotorReverse: Pins.D13,
-    */
     // Common
     A0: Pins.A0,
     A1: Pins.A1,
@@ -128,7 +128,7 @@ class RoboProBot extends ArduinoPeripheral {
      * @param {string} originalDeviceId - the original id of the peripheral, like xxx_arduinoUno
      */
     constructor (runtime, deviceId, originalDeviceId) {
-        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DIVECE_OPT);
+        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DEVICE_OPT, Pins);
     }
 }
 

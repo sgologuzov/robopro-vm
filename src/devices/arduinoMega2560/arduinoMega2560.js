@@ -36,7 +36,7 @@ const SERIAL_CONFIG = {
  * Configuration for arduino-cli.
  * @readonly
  */
-const DIVECE_OPT = {
+const DEVICE_OPT = {
     type: 'arduino',
     fqbn: 'arduino:avr:mega:cpu=atmega2560',
     firmware: 'arduinoMega2560.hex'
@@ -173,7 +173,7 @@ class ArduinoMega2560 extends ArduinoPeripheral{
      * @param {string} originalDeviceId - the original id of the peripheral, like xxx_arduinoUno
      */
     constructor (runtime, deviceId, originalDeviceId) {
-        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DIVECE_OPT);
+        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DEVICE_OPT, Pins);
     }
 }
 

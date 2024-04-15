@@ -34,7 +34,7 @@ const SERIAL_CONFIG = {
  * Configuration of build and flash. Used by arduino-cli.
  * @readonly
  */
-const DIVECE_OPT = {
+const DEVICE_OPT = {
     type: 'arduino',
     fqbn: {
         darwin: 'esp8266:esp8266:generic:baud=460800',
@@ -114,7 +114,7 @@ class ArduinoEsp8266 extends CommonPeripheral{
      * @param {string} originalDeviceId - the original id of the peripheral, like xxx_arduinoEsp8266
      */
     constructor (runtime, deviceId, originalDeviceId) {
-        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DIVECE_OPT);
+        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DEVICE_OPT, Pins);
     }
 }
 

@@ -55,15 +55,16 @@ const Mode = {
 class ArduinoPeripheral{
 
     /**
-     * Construct a Arduino communication object.
+     * Construct an Arduino communication object.
      * @param {Runtime} runtime - the OpenBlock runtime
      * @param {string} deviceId - the id of the peripheral
      * @param {string} originalDeviceId - the original id of the peripheral, like xxx_arduinoUno
      * @param {object} pnpidList - the pnp id of the peripheral
      * @param {object} serialConfig - the serial config of the peripheral
-     * @param {object} diveceOpt - the device optione of the peripheral
+     * @param {object} deviceOpt - the device option of the peripheral
+     * @param {object} pins - the device pins of the peripheral
      */
-    constructor (runtime, deviceId, originalDeviceId, pnpidList, serialConfig, diveceOpt) {
+    constructor (runtime, deviceId, originalDeviceId, pnpidList, serialConfig, deviceOpt, pins) {
         /**
          * The OpenBlock runtime used to trigger the green flag button.
          * @type {Runtime}
@@ -73,7 +74,8 @@ class ArduinoPeripheral{
 
         this.pnpidList = pnpidList;
         this.serialConfig = serialConfig;
-        this.diveceOpt = diveceOpt;
+        this.deviceOpt = deviceOpt;
+        this.pins = pins;
 
         /**
          * The serialport connection socket for reading/writing peripheral data.
@@ -156,7 +158,7 @@ class ArduinoPeripheral{
         }
 
         const base64Str = Buffer.from(code).toString('base64');
-        this._serialport.upload(base64Str, this.diveceOpt, 'base64');
+        this._serialport.upload(base64Str, this.deviceOpt, 'base64');
     }
 
     /**
@@ -173,7 +175,7 @@ class ArduinoPeripheral{
             this._firmataReadyTimeoutID = null;
         }
         this._stopHeartbeat();
-        this._serialport.uploadFirmware(this.diveceOpt);
+        this._serialport.uploadFirmware(this.deviceOpt);
     }
 
     /**
@@ -592,6 +594,17 @@ class ArduinoPeripheral{
             pin = this.parsePin(pin);
             this._firmata.buzzerNoTone(pin);
         }
+    }
+
+    enableMonitoring () {
+        this._firmata.on('value-changed', this._listenPin);
+    }
+
+    disableMonitoring () {
+        this._firmata.off('pin-monitoring');
+    }
+
+    _listenPin (data) {
     }
 }
 

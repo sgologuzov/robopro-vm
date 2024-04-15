@@ -31,7 +31,7 @@ const SERIAL_CONFIG = {
  * Configuration for arduino-cli.
  * @readonly
  */
-const DIVECE_OPT = {
+const DEVICE_OPT = {
     type: 'arduino',
     // Sketch: 1984KB FS: 64KB
     // CPU Speed: 133MHz
@@ -133,7 +133,7 @@ class ArduinoRaspberryPiPico extends CommonPeripheral{
      * @param {string} originalDeviceId - the original id of the peripheral, like xxx_arduinoUno
      */
     constructor (runtime, deviceId, originalDeviceId) {
-        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DIVECE_OPT);
+        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DEVICE_OPT, Pins);
     }
 }
 
