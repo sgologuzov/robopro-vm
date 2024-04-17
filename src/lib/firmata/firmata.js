@@ -267,8 +267,10 @@ const MIDI_RESPONSE = {
         /* istanbul ignore else */
         if (board.pins[board.analogPins[pin]]) {
             board.pins[board.analogPins[pin]].value = value;
+            board.emit('pin-monitoring', {pin: board.analogPins[pin], value});
+        } else {
+            board.emit('pin-monitoring', {pin, value});
         }
-
         board.emit(`analog-read-${pin}`, value);
         board.emit('analog-read', {
             pin,
@@ -311,6 +313,7 @@ const MIDI_RESPONSE = {
                     pin,
                     value
                 });
+                board.emit('pin-monitoring', {pin, value});
             }
         }
     }
@@ -977,6 +980,7 @@ class Firmata extends Emitter {
         }
 
         writeToTransport(this, data);
+        this.emit('pin-monitoring', {pin, value});
     }
 
     /**
@@ -1099,7 +1103,7 @@ class Firmata extends Emitter {
         } else {
             this.ports[port] &= ~bit;
         }
-
+        this.emit('pin-monitoring', {pin, value});
         return port;
     }
 

@@ -99,9 +99,12 @@ class ArduinoPeripheral{
         */
         this._pendingData = [];
 
+        this.disableMonitoring = this.disableMonitoring.bind(this);
+        this.enableMonitoring = this.enableMonitoring.bind(this);
         this.reset = this.reset.bind(this);
         this._onConnect = this._onConnect.bind(this);
         this._onMessage = this._onMessage.bind(this);
+        this._onPinMonitoring = this._onPinMonitoring.bind(this);
 
         /**
          * Firmata connection.
@@ -597,14 +600,53 @@ class ArduinoPeripheral{
     }
 
     enableMonitoring () {
-        this._firmata.on('value-changed', this._listenPin);
+        const monitorData = new Map();
+        if (this.pins) {
+            for (const key in this.pins) {
+                const pin = this.pins[key];
+                console.log('[enableMonitoring] pin:', pin);
+                let pinIndex = this.parsePin(pin);
+                if (pin.startsWith('A')) {
+                    // Shifting to analog pin number.
+                    pinIndex = pinIndex - 14;
+                    this._firmata.reportAnalogPin(pinIndex, 1);
+                } else {
+                    this._firmata.reportDigitalPin(pinIndex, 1);
+                }
+                monitorData.set(key, 0);
+            }
+        }
+        this._firmata.on('pin-monitoring', this._onPinMonitoring);
+        return monitorData;
     }
 
     disableMonitoring () {
-        this._firmata.off('pin-monitoring');
+        if (this.pins) {
+            for (const key in this.pins) {
+                const pin = this.pins[key];
+                console.log('[disableMonitoring] pin:', pin);
+                let pinIndex = this.parsePin(pin);
+                if (pin.startsWith('A')) {
+                    // Shifting to analog pin number.
+                    pinIndex = pinIndex - 14;
+                    this._firmata.reportAnalogPin(pinIndex, 0);
+                } else {
+                    this._firmata.reportDigitalPin(pinIndex, 0);
+                }
+            }
+        }
+        this._firmata.removeAllListeners('pin-monitoring');
     }
 
-    _listenPin (data) {
+    _onPinMonitoring (data) {
+        // console.log('[_onPinMonitoring] data:', data);
+        const monitors = this._runtime.getMonitorState();
+        const monitor = monitors.get(this._deviceId);
+        if (monitor) {
+            const pin = Object.keys(this.pins)[data.pin];
+            monitor.value.set(pin, data.value);
+            this._runtime.updateMonitors();
+        }
     }
 }
 

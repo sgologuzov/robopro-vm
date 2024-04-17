@@ -1015,6 +1015,10 @@ class Runtime extends EventEmitter {
         return this._monitorState;
     }
 
+    updateMonitors () {
+        this.emit(Runtime.MONITORS_UPDATE, this._monitorState);
+    }
+
     /**
      * Clear all blocks in monitor.
      */
@@ -1929,24 +1933,32 @@ class Runtime extends EventEmitter {
     enablePeripheralMonitoring (deviceId) {
         deviceId = this.analysisRealDeviceId(deviceId);
         const device = this.peripheralExtensions[deviceId];
-        console.log('this.peripheralExtensions[deviceId]:', device);
         if (device) {
-            const fakeMap = new Map();
-            const pins = device.pins;
-            if (pins) {
-                for (const pin in pins) {
-                    fakeMap.set(pin, 0);
-                }
-            }
             if (!this.requestShowMonitor(deviceId)) {
+                const monitorMap = device.enableMonitoring();
                 this.requestAddMonitor(MonitorRecord({
                     id: deviceId,
                     mode: 'map',
                     opcode: deviceId,
-                    value: fakeMap
+                    target: this._editingTarget,
+                    value: monitorMap
                 }));
                 this.emit(Runtime.PERIPHERAL_MONITORING_UPDATE, {deviceId: deviceId, monitoring: true});
             }
+        }
+    }
+
+    /**
+     * Disable peripheral monitoring.
+     * @param {string} deviceId - the id of the extension.
+     */
+    disablePeripheralMonitoring (deviceId) {
+        deviceId = this.analysisRealDeviceId(deviceId);
+        const device = this.peripheralExtensions[deviceId];
+        if (device) {
+            device.disableMonitoring();
+            this.requestRemoveMonitor(deviceId);
+            this.emit(Runtime.PERIPHERAL_MONITORING_UPDATE, {deviceId: deviceId, monitoring: false});
         }
     }
 

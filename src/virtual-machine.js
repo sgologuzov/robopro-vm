@@ -396,8 +396,7 @@ class VirtualMachine extends EventEmitter {
      * @param {string} extensionId - the id of the extension.
      */
     disablePeripheralMonitoring (extensionId) {
-        this.runtime.requestRemoveMonitor(extensionId);
-        this.emit(Runtime.PERIPHERAL_MONITORING_UPDATE, {deviceId: extensionId, monitoring: false});
+        this.runtime.disablePeripheralMonitoring(extensionId);
     }
 
     /**
