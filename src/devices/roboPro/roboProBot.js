@@ -130,6 +130,34 @@ class RoboProBot extends ArduinoPeripheral {
     constructor (runtime, deviceId, originalDeviceId) {
         super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DEVICE_OPT, Pins);
     }
+
+    /**
+     * Re-maps sensor value from the 0...1023 range to the 0...100 range.
+     * @param {Pins} pin - sensor pin
+     * @param {number} value - value from the sensor.
+     * @return {number} re-mapped value
+     * @private
+     */
+    mapPinValue (pin, value) {
+        switch (pin) {
+        case PinsMap.A3:
+            value = IN_SENSOR_MAX - value;
+            break;
+        }
+
+        switch (pin) {
+        case PinsMap.A0:
+        case PinsMap.A1:
+        case PinsMap.A2:
+        case PinsMap.A3:
+        case PinsMap.A4:
+        case PinsMap.A5:
+            value = ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
+                OUT_SENSOR_MIN;
+            return Math.round(value);
+        }
+        return value;
+    }
 }
 
 /**
@@ -533,7 +561,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      */
     readSensor (args) {
         const promise = this._peripheral.readAnalogPin(args.PIN);
-        return promise.then(value => this._mapSensorValue(args.PIN, value));
+        return promise.then(value => this._peripheral.mapPinValue(args.PIN, value));
     }
 
     /**
@@ -628,24 +656,6 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
         if (timeElapsed < util.stackFrame.duration * 1000) {
             util.yield();
         }
-    }
-
-    /**
-     * Re-maps sensor value from the 0...1023 range to the 0...100 range.
-     * @param {Pins} pin - sensor pin
-     * @param {number} value - value from the sensor.
-     * @return {number} re-mapped value
-     * @private
-     */
-    _mapSensorValue (pin, value) {
-        switch (pin) {
-        case PinsMap.A3:
-            value = IN_SENSOR_MAX - value;
-            break;
-        }
-        value = ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
-            OUT_SENSOR_MIN;
-        return Math.round(value);
     }
 }
 

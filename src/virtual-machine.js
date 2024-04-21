@@ -582,7 +582,6 @@ class VirtualMachine extends EventEmitter {
      * @returns {Promise} Promise that resolves after the project has loaded
      */
     deserializeProject (projectJSON, zip) {
-        console.log('[deserializeProject] projectJSON:', projectJSON);
         // Clear the current runtime
         this.clear();
 
@@ -592,7 +591,6 @@ class VirtualMachine extends EventEmitter {
         const runtime = this.runtime;
         const deserializePromise = function () {
             const projectVersion = projectJSON.projectVersion;
-            console.log('[deserializePromise] projectVersion:', projectVersion);
             if (projectVersion === 2) {
                 const sb2 = require('./serialization/sb2');
                 return sb2.deserialize(projectJSON, runtime, false, zip);
@@ -624,7 +622,6 @@ class VirtualMachine extends EventEmitter {
                 } else if (typeof projectJSON.device === 'object') {
                     device = projectJSON.device;
                 }
-                console.log('[deserializePromise] device:', device);
                 return this.installDevice(targets, device, projectJSON.programMode, projectJSON.deviceExtensions);
             })
             // Step2: Install target and if there has deivce setting, set the editing target to stage incase there is
@@ -695,7 +692,6 @@ class VirtualMachine extends EventEmitter {
      */
     installDevice (targets, device, programMode = 'realtime') {
         targets = targets.filter(target => !!target);
-        console.log('[installDevice] device:', device);
 
         if (device.deviceId) {
             this.runtime.setRealtimeMode(programMode === 'realtime');

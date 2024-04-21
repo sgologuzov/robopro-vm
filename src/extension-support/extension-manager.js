@@ -343,7 +343,6 @@ class ExtensionManager {
      * Clear device
      */
     clearDevice (deviceId) {
-        console.log('[clearDevice] deviceId:', deviceId)
         this.runtime.disconnectPeripheral(deviceId);
         this.runtime.removeDevice(deviceId);
         this.runtime.clearMonitor();
@@ -371,7 +370,6 @@ class ExtensionManager {
         this.clearDeviceExtension();
 
         for (const deviceId of deviceIds) {
-            console.log('[clearDevices] deviceId:', deviceId)
             this.runtime.emit(this.runtime.constructor.SCRATCH_EXTENSION_REMOVED, {deviceId});
         }
     }

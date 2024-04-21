@@ -5,6 +5,7 @@ const Serialport = require('../../io/serialport');
 const Base64Util = require('../../util/base64-util');
 
 const Firmata = require('../../lib/firmata/firmata');
+const {Map} = require('immutable');
 
 /**
  * A string to report connect firmata timeout.
@@ -141,6 +142,7 @@ class ArduinoPeripheral{
          */
         this._isFirmataConnected = false;
 
+        this._monitorData = null;
         this._startHeartbeat = this._startHeartbeat.bind(this);
         this._listenHeartbeat = this._listenHeartbeat.bind(this);
         this._handleProgramModeUpdate = this._handleProgramModeUpdate.bind(this);
@@ -288,6 +290,17 @@ class ArduinoPeripheral{
 
         const data = Base64Util.uint8ArrayToBase64(message);
         this._serialport.write(data, 'base64');
+    }
+
+    /**
+     * Re-maps pin value if need.
+     * @param {Pins} pin - sensor pin
+     * @param {number} value - value from the sensor.
+     * @return {number} re-mapped value
+     * @private
+     */
+    mapPinValue (pin, value) {
+        return value;
     }
 
     /**
@@ -600,11 +613,10 @@ class ArduinoPeripheral{
     }
 
     enableMonitoring () {
-        const monitorData = new Map();
+        this._monitorData = {};
         if (this.pins) {
             for (const key in this.pins) {
                 const pin = this.pins[key];
-                console.log('[enableMonitoring] pin:', pin);
                 let pinIndex = this.parsePin(pin);
                 if (pin.startsWith('A')) {
                     // Shifting to analog pin number.
@@ -613,18 +625,18 @@ class ArduinoPeripheral{
                 } else {
                     this._firmata.reportDigitalPin(pinIndex, 1);
                 }
-                monitorData.set(key, 0);
+                this._monitorData[key] = 0;
             }
         }
         this._firmata.on('pin-monitoring', this._onPinMonitoring);
-        return monitorData;
+        return this._monitorData;
     }
 
     disableMonitoring () {
+        this._monitorData = null;
         if (this.pins) {
             for (const key in this.pins) {
                 const pin = this.pins[key];
-                console.log('[disableMonitoring] pin:', pin);
                 let pinIndex = this.parsePin(pin);
                 if (pin.startsWith('A')) {
                     // Shifting to analog pin number.
@@ -639,13 +651,13 @@ class ArduinoPeripheral{
     }
 
     _onPinMonitoring (data) {
-        // console.log('[_onPinMonitoring] data:', data);
-        const monitors = this._runtime.getMonitorState();
-        const monitor = monitors.get(this._deviceId);
-        if (monitor) {
+        if (this._monitorData) {
             const pin = Object.keys(this.pins)[data.pin];
-            monitor.value.set(pin, data.value);
-            this._runtime.updateMonitors();
+            this._monitorData[pin] = this.mapPinValue(this.pins[pin], data.value);
+            this._runtime.requestUpdateMonitor(Map({
+                id: this._deviceId,
+                value: {...this._monitorData}
+            }));
         }
     }
 }

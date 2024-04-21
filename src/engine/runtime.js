@@ -1932,16 +1932,17 @@ class Runtime extends EventEmitter {
      */
     enablePeripheralMonitoring (deviceId) {
         deviceId = this.analysisRealDeviceId(deviceId);
-        const device = this.peripheralExtensions[deviceId];
-        if (device) {
+        const peripheral = this.peripheralExtensions[deviceId];
+        if (peripheral) {
             if (!this.requestShowMonitor(deviceId)) {
-                const monitorMap = device.enableMonitoring();
+                const monitorObject = peripheral.enableMonitoring();
                 this.requestAddMonitor(MonitorRecord({
                     id: deviceId,
-                    mode: 'map',
+                    mode: 'object',
+                    draggable: false,
                     opcode: deviceId,
                     target: this._editingTarget,
-                    value: monitorMap
+                    value: monitorObject
                 }));
                 this.emit(Runtime.PERIPHERAL_MONITORING_UPDATE, {deviceId: deviceId, monitoring: true});
             }
