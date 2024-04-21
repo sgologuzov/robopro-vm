@@ -146,12 +146,12 @@ class RoboProBot extends ArduinoPeripheral {
         }
 
         switch (pin) {
-        case PinsMap.A0:
-        case PinsMap.A1:
-        case PinsMap.A2:
-        case PinsMap.A3:
-        case PinsMap.A4:
-        case PinsMap.A5:
+        case Pins.A0:
+        case Pins.A1:
+        case Pins.A2:
+        case Pins.A3:
+        case Pins.A4:
+        case Pins.A5:
             value = ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
                 OUT_SENSOR_MIN;
             return Math.round(value);

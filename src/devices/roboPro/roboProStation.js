@@ -144,11 +144,11 @@ class RoboProStation extends ArduinoPeripheral {
         }
 
         switch (pin) {
-        case PinsMap.A0:
-        case PinsMap.A1:
-        case PinsMap.A2:
-        case PinsMap.A3:
-        case PinsMap.A4:
+        case Pins.A0:
+        case Pins.A1:
+        case Pins.A2:
+        case Pins.A3:
+        case Pins.A4:
             value = ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
                 OUT_SENSOR_MIN;
             return Math.round(value);
@@ -399,6 +399,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
 
         // Create a new Arduino Nano peripheral instance
         this._peripheral = new RoboProStation(this.runtime, this.DEVICE_ID, originalDeviceId);
+        this._peripheral.setPinMode(PinsMap.LatchLED, Mode.Output);
         this._ledState = [0, 0, 0, 0, 0, 0, 0, 0];
     }
 
