@@ -703,6 +703,14 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
+     * Remove device.
+     * @param {string} deviceId - id of the device
+     */
+    removeDevice (deviceId) {
+        this.extensionManager.clearDevice(deviceId);
+    }
+
+    /**
      * Install `deserialize` results: zero or more targets after the extensions (if any) used by those targets.
      * @param {Array.<Target>} targets - the targets to be installed
      * @param {ImportedExtensionsInfo} extensions - metadata about extensions used by these targets
