@@ -610,25 +610,21 @@ class VirtualMachine extends EventEmitter {
                         'scratch-vm-deserialize-start', 'scratch-vm-deserialize-end');
                 }
 
-                let device = {};
-
                 // Since the new version of the project file incorporates the parameters of the device,
                 // if the device is found to be a string, it means that the project file is an old version
                 // of the project and needs to be read using the old method.
-                if (typeof projectJSON.device === 'string') {
-                    device.deviceId = projectJSON.device;
-                    device.type = projectJSON.deviceType;
-                    device.pnpIdList = projectJSON.pnpIdList;
-                } else if (typeof projectJSON.device === 'object') {
-                    device = projectJSON.device;
+                if (projectJSON.devices) {
+                    for (const device of projectJSON.devices) {
+                        this.installDevice(targets, device, projectJSON.programMode, projectJSON.deviceExtensions);
+                    }
                 }
-                return this.installDevice(targets, device, projectJSON.programMode, projectJSON.deviceExtensions);
+                return targets;
             })
             // Step2: Install target and if there has deivce setting, set the editing target to stage incase there is
             // device extensions block in sprite workspace, it will cause error.
             .then(targets => this.installTargets(targets, projectJSON.extensions, true))
             // Step3: Install device extension. it can get flyout blocks because the toolbox has been updated in the
-            // previous step. After loaded set the editing target to firset sprite if it has one.
+            // previous step. After loaded set the editing target to the first sprite if it has one.
             .then(targets => this.installDeviceExtensions(projectJSON.deviceExtensions, targets));
     }
 
