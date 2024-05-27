@@ -89,17 +89,17 @@ const Direction = {
 
 const PinsMap = {
     // RoboPro
-    /*
     LeftMotorReverse: Pins.D4,
     LeftMotorPwm: Pins.D5,
     RightMotorPwm: Pins.D6,
     RightMotorReverse: Pins.D7,
-     */
     // Keyestudio
+    /*
     LeftMotorReverse: Pins.D12,
     LeftMotorPwm: Pins.D3,
     RightMotorPwm: Pins.D11,
     RightMotorReverse: Pins.D13,
+     */
     // Common
     A0: Pins.A0,
     A1: Pins.A1,
