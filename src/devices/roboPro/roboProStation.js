@@ -409,7 +409,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     getInfo () {
         return [
             {
-                id: 'pin',
+                id: 'roboProStation',
                 name: formatMessage({
                     id: 'roboPro.category.roboProStation',
                     default: 'Robo Station',
