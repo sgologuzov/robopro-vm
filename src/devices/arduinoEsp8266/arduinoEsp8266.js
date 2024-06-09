@@ -114,7 +114,7 @@ class ArduinoEsp8266 extends CommonPeripheral{
      * @param {string} originalDeviceId - the original id of the peripheral, like xxx_arduinoEsp8266
      */
     constructor (runtime, deviceId, originalDeviceId) {
-        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DEVICE_OPT, Pins);
+        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DEVICE_OPT);
     }
 }
 

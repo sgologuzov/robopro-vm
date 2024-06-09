@@ -109,6 +109,8 @@ const PinsMap = {
     A5: Pins.A5
 };
 
+const MonitoringPins = ['A0', 'A1', 'A2', 'A3', 'A4', 'A5'];
+
 const MIN_MOTOR_POWER = 0;
 const MAX_MOTOR_POWER = 255;
 const DEGREE_RATIO = 120;
@@ -128,7 +130,7 @@ class RoboProBot extends ArduinoPeripheral {
      * @param {string} originalDeviceId - the original id of the peripheral, like xxx_arduinoUno
      */
     constructor (runtime, deviceId, originalDeviceId) {
-        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DEVICE_OPT, Pins);
+        super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DEVICE_OPT, Pins, MonitoringPins);
     }
 
     /**

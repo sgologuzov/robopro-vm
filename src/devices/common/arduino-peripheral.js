@@ -64,8 +64,9 @@ class ArduinoPeripheral{
      * @param {object} serialConfig - the serial config of the peripheral
      * @param {object} deviceOpt - the device option of the peripheral
      * @param {object} pins - the device pins of the peripheral
+     * @param {array} monitoringPins - array of pins for monitoring
      */
-    constructor (runtime, deviceId, originalDeviceId, pnpidList, serialConfig, deviceOpt, pins) {
+    constructor (runtime, deviceId, originalDeviceId, pnpidList, serialConfig, deviceOpt, pins, monitoringPins) {
         /**
          * The OpenBlock runtime used to trigger the green flag button.
          * @type {Runtime}
@@ -77,6 +78,7 @@ class ArduinoPeripheral{
         this.serialConfig = serialConfig;
         this.deviceOpt = deviceOpt;
         this.pins = pins;
+        this.monitoringPins = monitoringPins;
 
         /**
          * The serialport connection socket for reading/writing peripheral data.
@@ -614,8 +616,8 @@ class ArduinoPeripheral{
 
     enableMonitoring () {
         this._monitorData = {};
-        if (this.pins) {
-            for (const key in this.pins) {
+        if (this.monitoringPins) {
+            for (const key of this.monitoringPins) {
                 const pin = this.pins[key];
                 let pinIndex = this.parsePin(pin);
                 if (pin.startsWith('A')) {
@@ -634,8 +636,8 @@ class ArduinoPeripheral{
 
     disableMonitoring () {
         this._monitorData = null;
-        if (this.pins) {
-            for (const key in this.pins) {
+        if (this.monitoringPins) {
+            for (const key of this.monitoringPins) {
                 const pin = this.pins[key];
                 let pinIndex = this.parsePin(pin);
                 if (pin.startsWith('A')) {
@@ -653,11 +655,13 @@ class ArduinoPeripheral{
     _onPinMonitoring (data) {
         if (this._monitorData) {
             const pin = Object.keys(this.pins)[data.pin];
-            this._monitorData[pin] = this.mapPinValue(this.pins[pin], data.value);
-            this._runtime.requestUpdateMonitor(Map({
-                id: this._deviceId,
-                value: {...this._monitorData}
-            }));
+            if (this.monitoringPins && this.monitoringPins.indexOf(pin) > -1) {
+                this._monitorData[pin] = this.mapPinValue(this.pins[pin], data.value);
+                this._runtime.requestUpdateMonitor(Map({
+                    id: this._deviceId,
+                    value: {...this._monitorData}
+                }));
+            }
         }
     }
 }
