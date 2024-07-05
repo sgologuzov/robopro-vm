@@ -487,22 +487,6 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         }
                     },
                     {
-                        opcode: 'colorLedTurnOff',
-                        text: formatMessage({
-                            id: 'roboPro.station.colorLedTurnOff',
-                            default: 'turn LED [LED_PIN] on',
-                            description: 'Turn LED on'
-                        }),
-                        blockType: BlockType.COMMAND,
-                        arguments: {
-                            LED_PIN: {
-                                type: ArgumentType.STRING,
-                                menu: 'colorLeds',
-                                defaultValue: PinsMap.RedLED
-                            }
-                        }
-                    },
-                    {
                         opcode: 'playNoteForBeats',
                         blockType: BlockType.COMMAND,
                         text: formatMessage({
