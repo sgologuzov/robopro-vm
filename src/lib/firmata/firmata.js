@@ -636,7 +636,7 @@ class Firmata extends Emitter {
         const board = this;
         const defaults = {
             reportVersionTimeout: 5000,
-            samplingInterval: 19
+            samplingInterval: 50
         };
 
         const settings = Object.assign({}, defaults, options);
