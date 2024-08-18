@@ -271,19 +271,24 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      */
     constructor (runtime, originalDeviceId) {
         super(runtime, originalDeviceId);
+        this._init = this._init.bind(this);
 
         // Create a new Arduino Nano peripheral instance
         this._peripheral = new RoboProBot(this.runtime, this.DEVICE_ID, originalDeviceId);
-        this._peripheral.setPinMode(PinsMap.LeftMotorReverse, Mode.Output);
-        this._peripheral.setPinMode(PinsMap.LeftMotorPwm, Mode.Output);
-        this._peripheral.setPinMode(PinsMap.RightMotorReverse, Mode.Output);
-        this._peripheral.setPinMode(PinsMap.RightMotorPwm, Mode.Output);
 
         this._directionRight = Direction.Forward;
         this._directionLeft = Direction.Forward;
         this._powerRight = MAX_MOTOR_POWER;
         this._powerLeft = MAX_MOTOR_POWER;
         this._motorsOnForSecondsTimeout = null;
+        this._peripheral.on('connected', this._init);
+    }
+
+    _init () {
+        this._peripheral.setPinMode(PinsMap.LeftMotorReverse, Mode.Output);
+        this._peripheral.setPinMode(PinsMap.LeftMotorPwm, Mode.Output);
+        this._peripheral.setPinMode(PinsMap.RightMotorReverse, Mode.Output);
+        this._peripheral.setPinMode(PinsMap.RightMotorPwm, Mode.Output);
     }
 
     /**

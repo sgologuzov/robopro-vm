@@ -4,6 +4,7 @@ const Buffer = require('buffer').Buffer;
 const Serialport = require('../../io/serialport');
 const Base64Util = require('../../util/base64-util');
 
+const Emitter = require('events');
 const Firmata = require('../../lib/firmata/firmata');
 const {Map} = require('immutable');
 
@@ -53,7 +54,7 @@ const Mode = {
 /**
  * Manage communication with a Arduino peripheral over a OpenBlock Link client socket.
  */
-class ArduinoPeripheral{
+class ArduinoPeripheral extends Emitter {
 
     /**
      * Construct an Arduino communication object.
@@ -67,6 +68,7 @@ class ArduinoPeripheral{
      * @param {array} monitoringPins - array of pins for monitoring
      */
     constructor (runtime, deviceId, originalDeviceId, pnpidList, serialConfig, deviceOpt, pins, monitoringPins) {
+        super();
         /**
          * The OpenBlock runtime used to trigger the green flag button.
          * @type {Runtime}
@@ -343,6 +345,7 @@ class ArduinoPeripheral{
                         this._isFirmataConnected = false;
                         this._serialport.handleRealtimeDisconnectError(ConnectFirmataTimeout);
                     }, FrimataHeartbeatTimeout);
+                    this.emit('connected');
                 });
             } else {
                 this._stopHeartbeat();
@@ -375,6 +378,7 @@ class ArduinoPeripheral{
             this._firmataIntervelID = null;
         }
         this._isFirmataConnected = false;
+        this.emit('disconnected');
     }
 
     /**

@@ -398,11 +398,21 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      */
     constructor (runtime, originalDeviceId) {
         super(runtime, originalDeviceId);
+        this._init = this._init.bind(this);
 
         // Create a new Arduino Nano peripheral instance
         this._peripheral = new RoboProStation(this.runtime, this.DEVICE_ID, originalDeviceId);
-        this._peripheral.setPinMode(PinsMap.LatchLED, Mode.Output);
         this._ledState = [0, 0, 0, 0, 0, 0, 0, 0];
+        this._peripheral.on('connected', this._init);
+    }
+
+    _init () {
+        this._peripheral.setPinMode(PinsMap.LatchLED, Mode.Output);
+        this._peripheral.setPinMode(PinsMap.Button1, Mode.Input);
+        this._peripheral.setPinMode(PinsMap.Button2, Mode.Input);
+        this._peripheral.setPinMode(PinsMap.Button3, Mode.Input);
+        this._peripheral.setPinMode(PinsMap.Button4, Mode.Input);
+        this._peripheral.setPinMode(PinsMap.Button5, Mode.Input);
     }
 
     /**
@@ -730,7 +740,6 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      * @return {Promise} - true if read high level, false if read low level.
      */
     readButton (args) {
-        this._peripheral.setPinMode(args.PIN, Mode.Input);
         return this._peripheral.readDigitalPin(args.PIN);
     }
 
@@ -756,7 +765,6 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     }
 
     _updateShiftRegister () {
-        this._peripheral.setPinMode(PinsMap.LatchLED, Mode.Output);
         this._peripheral.setDigitalOutput(PinsMap.LatchLED, Level.Low);
         let pinState;
         this._peripheral.setDigitalOutput(PinsMap.DataLED, Level.Low);
