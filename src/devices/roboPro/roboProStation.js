@@ -103,7 +103,7 @@ const PinsMap = {
     LatchLED: Pins.A5
 };
 
-const MonitoringPins = ['D8', 'D9', 'D10', 'D11', 'D12', 'D13', 'A0', 'A1', 'A2', 'A3', 'A4'];
+const MonitoringPins = ['D8', 'D9', 'D10', 'D11', 'D12', 'A0', 'A2', 'A3', 'A4'];
 
 const IN_SENSOR_MIN = 0;
 const IN_SENSOR_MAX = 1023;
