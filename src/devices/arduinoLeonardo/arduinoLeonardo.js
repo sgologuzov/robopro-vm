@@ -898,8 +898,7 @@ class OpenBlockArduinoLeonardoDevice {
      * @return {Promise} - a Promise that resolves after the set pin mode is done.
      */
     setPinMode (args) {
-        this._peripheral.setPinMode(args.PIN, args.MODE);
-        return Promise.resolve();
+        return this._peripheral.setPinMode(args.PIN, args.MODE);
     }
 
     /**
@@ -908,8 +907,7 @@ class OpenBlockArduinoLeonardoDevice {
      * @return {Promise} - a Promise that resolves after the set pin digital out level is done.
      */
     setDigitalOutput (args) {
-        this._peripheral.setDigitalOutput(args.PIN, args.LEVEL);
-        return Promise.resolve();
+        return this._peripheral.setDigitalOutput(args.PIN, args.LEVEL);
     }
 
     /**
@@ -918,14 +916,13 @@ class OpenBlockArduinoLeonardoDevice {
      * @return {Promise} - a Promise that resolves after the set pin pwm out value is done.
      */
     setPwmOutput (args) {
-        this._peripheral.setPwmOutput(args.PIN, args.OUT);
-        return Promise.resolve();
+        return this._peripheral.setPwmOutput(args.PIN, args.OUT);
     }
 
     /**
      * Read pin digital level.
      * @param {object} args - the block's arguments.
-     * @return {boolean} - true if read high level, false if read low level.
+     * @return {Promise} - a Promise that resolves after the reading is done.
      */
     readDigitalPin (args) {
         return this._peripheral.readDigitalPin(args.PIN);
@@ -934,7 +931,7 @@ class OpenBlockArduinoLeonardoDevice {
     /**
      * Read analog pin.
      * @param {object} args - the block's arguments.
-     * @return {number} - analog value fo the pin.
+     * @return {Promise} - a Promise that resolves after the reading is done.
      */
     readAnalogPin (args) {
         return this._peripheral.readAnalogPin(args.PIN);
@@ -946,8 +943,7 @@ class OpenBlockArduinoLeonardoDevice {
      * @return {Promise} - a Promise that resolves after the set servo out value is done.
      */
     setServoOutput (args) {
-        this._peripheral.setServoOutput(args.PIN, args.OUT);
-        return Promise.resolve();
+        return this._peripheral.setServoOutput(args.PIN, args.OUT);
     }
 }
 

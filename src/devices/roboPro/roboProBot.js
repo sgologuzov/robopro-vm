@@ -483,30 +483,37 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
     /**
      * Turn on motors for seconds.
      * @param {object} args - the block's arguments.
-     * @param {object} util - utility object provided by the runtime.
+     * @param {BlockUtility} util - utility object provided by the runtime.
+     * @return {Promise} - a Promise that resolves on motors switched on and off.
      */
     motorsOnForSeconds (args, util) {
-        this._motorsOnForSeconds(args.SECONDS, util);
+        return this._motorsOnForSeconds(args.SECONDS, util);
     }
 
     /**
      * Turn on motors.
+     * @param {object} args - the block's arguments.
+     * @param {BlockUtility} util - utility object provided by the runtime.
+     * @return {Promise} - a Promise that resolves on motors switched on.
      */
-    motorsOn () {
-        this._motorsOn();
+    motorsOn (args, util) {
+        return this._motorsOn(util);
     }
 
     /**
      * Turn off motors.
      * @param {object} args - the block's arguments.
+     * @param {BlockUtility} util - utility object provided by the runtime.
+     * @return {Promise} - a Promise that resolves on motors switched off.
      */
-    motorsOff () {
-        this._motorsOff();
+    motorsOff (args, util) {
+        return this._motorsOff(util);
     }
 
     /**
      * Set robot direction.
      * @param {object} args - the block's arguments.
+     * @param {BlockUtility} util - utility object provided by the runtime.
      */
     setDirectionTo (args) {
         this._setDirection(args.DIRECTION);
@@ -516,20 +523,22 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      * Turn robot right.
      * @param {object} args - the block's arguments.
      * @param {object} util - utility object provided by the runtime.
+     * @return {Promise} - a Promise that resolves on the bot turned.
      */
     turnRight (args, util) {
         this._setDirection(Direction.TurnRight);
-        this._motorsOnForSeconds(args.DEGREES / DEGREE_RATIO, util);
+        return this._motorsOnForSeconds(args.DEGREES / DEGREE_RATIO, util);
     }
 
     /**
      * Turn robot left.
      * @param {object} args - the block's arguments.
      * @param {object} util - utility object provided by the runtime.
+     * @return {Promise} - a Promise that resolves on the bot turned.
      **/
     turnLeft (args, util) {
         this._setDirection(Direction.TurnLeft);
-        this._motorsOnForSeconds(args.DEGREES / DEGREE_RATIO, util);
+        return this._motorsOnForSeconds(args.DEGREES / DEGREE_RATIO, util);
     }
 
     /**
@@ -598,27 +607,30 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
             const duration = Math.max(0, Cast.toNumber(durationSec));
             clearTimeout(this._motorsOnForSecondsTimeout);
             this._motorsOnForSecondsTimeout = setTimeout(() => {
-                this._motorsOff();
+                this._motorsOff().then();
             }, duration * 1000);
             this._startStackTimer(util, duration);
-            this._motorsOn();
-        } else {
-            this._checkStackTimer(util);
+            return this._motorsOn(util);
         }
+        this._checkStackTimer(util);
     }
 
     _motorsOn () {
-        this._peripheral.setDigitalOutput(PinsMap.LeftMotorReverse,
-            this._directionLeft === Direction.Backward ? Level.High : Level.Low);
-        this._peripheral.setPwmOutput(PinsMap.LeftMotorPwm, this._powerLeft);
-        this._peripheral.setDigitalOutput(PinsMap.RightMotorReverse,
-            this._directionRight === Direction.Backward ? Level.High : Level.Low);
-        this._peripheral.setPwmOutput(PinsMap.RightMotorPwm, this._powerRight);
+        return Promise.all([
+            this._peripheral.setDigitalOutput(PinsMap.LeftMotorReverse,
+                this._directionLeft === Direction.Backward ? Level.High : Level.Low),
+            this._peripheral.setPwmOutput(PinsMap.LeftMotorPwm, this._powerLeft),
+            this._peripheral.setDigitalOutput(PinsMap.RightMotorReverse,
+                this._directionRight === Direction.Backward ? Level.High : Level.Low),
+            this._peripheral.setPwmOutput(PinsMap.RightMotorPwm, this._powerRight)
+        ]);
     }
 
     _motorsOff () {
-        this._peripheral.setPwmOutput(PinsMap.LeftMotorPwm, MIN_MOTOR_POWER);
-        this._peripheral.setPwmOutput(PinsMap.RightMotorPwm, MIN_MOTOR_POWER);
+        return Promise.all([
+            this._peripheral.setPwmOutput(PinsMap.LeftMotorPwm, MIN_MOTOR_POWER),
+            this._peripheral.setPwmOutput(PinsMap.RightMotorPwm, MIN_MOTOR_POWER)
+        ]);
     }
 
     _convertPercentPower (percentPower) {

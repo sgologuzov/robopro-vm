@@ -36,9 +36,14 @@ const FrimataHeartbeatTimeout = 2200;
 const FirmataReadyTimeout = 6500;
 
 /**
- * A time interval to wait deivce report data.
+ * A time interval to wait device reports data.
  */
 const FrimataReadTimeout = 2000;
+
+/**
+ * A time interval to wait device accepts data.
+ */
+const FrimataWriteTimeout = 20;
 
 const Level = {
     High: 'HIGH',
@@ -487,52 +492,70 @@ class ArduinoPeripheral extends Emitter {
     /**
      * @param {PIN} pin - the pin to set.
      * @param {MODE} mode - the pin mode to set.
+     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
      */
     setPinMode (pin, mode) {
         if (this.isReady()) {
-            pin = this.parsePin(pin);
-            switch (mode) {
-            case Mode.Input:
-                mode = this._firmata.MODES.INPUT;
-                break;
-            case Mode.Output:
-                mode = this._firmata.MODES.OUTPUT;
-                break;
-            case Mode.InputPullup:
-                mode = this._firmata.MODES.PULLUP;
-                break;
-            }
-            this._firmata.pinMode(pin, mode);
+            return new Promise(resolve => {
+                pin = this.parsePin(pin);
+                switch (mode) {
+                case Mode.Input:
+                    mode = this._firmata.MODES.INPUT;
+                    break;
+                case Mode.Output:
+                    mode = this._firmata.MODES.OUTPUT;
+                    break;
+                case Mode.InputPullup:
+                    mode = this._firmata.MODES.PULLUP;
+                    break;
+                }
+                this._firmata.pinMode(pin, mode);
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataWriteTimeout);
+            });
         }
     }
 
     /**
      * @param {PIN} pin - the pin to set.
      * @param {LEVEL} level - the pin level to set.
+     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
      */
     setDigitalOutput (pin, level) {
         if (this.isReady()) {
-            pin = this.parsePin(pin);
-            level = this.parseLevel(level);
-            this._firmata.digitalWrite(pin, level);
+            return new Promise(resolve => {
+                pin = this.parsePin(pin);
+                level = this.parseLevel(level);
+                this._firmata.digitalWrite(pin, level);
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataWriteTimeout);
+            });
         }
     }
 
     /**
      * @param {PIN} pin - the pin to set.
      * @param {VALUE} value - the pwm value to set.
+     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
      */
     setPwmOutput (pin, value) {
         if (this.isReady()) {
-            pin = this.parsePin(pin);
-            if (value < 0) {
-                value = 0;
-            }
-            if (value > 255) {
-                value = 255;
-            }
-            this._firmata.pinMode(pin, this._firmata.MODES.PWM);
-            this._firmata.pwmWrite(pin, value);
+            return new Promise(resolve => {
+                pin = this.parsePin(pin);
+                if (value < 0) {
+                    value = 0;
+                }
+                if (value > 255) {
+                    value = 255;
+                }
+                this._firmata.pinMode(pin, this._firmata.MODES.PWM);
+                this._firmata.pwmWrite(pin, value);
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataWriteTimeout);
+            });
         }
     }
 
@@ -578,21 +601,27 @@ class ArduinoPeripheral extends Emitter {
     /**
      * @param {PIN} pin - the pin to set.
      * @param {VALUE} value - the degree to set.
+     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
      */
     setServoOutput (pin, value) {
         if (this.isReady()) {
-            pin = this.parsePin(pin);
-            if (value < 0) {
-                value = 0;
-            }
-            if (value > 180) {
-                value = 180;
-            }
-            this._firmata.pinMode(pin, this._firmata.MODES.PWM);
-            this._firmata.pwmWrite(pin, value);
+            return new Promise(resolve => {
+                pin = this.parsePin(pin);
+                if (value < 0) {
+                    value = 0;
+                }
+                if (value > 180) {
+                    value = 180;
+                }
+                this._firmata.pinMode(pin, this._firmata.MODES.PWM);
+                this._firmata.pwmWrite(pin, value);
 
-            this._firmata.servoConfig(pin, 600, 2400);
-            this._firmata.servoWrite(pin, value);
+                this._firmata.servoConfig(pin, 600, 2400);
+                this._firmata.servoWrite(pin, value);
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataWriteTimeout);
+            });
         }
     }
 

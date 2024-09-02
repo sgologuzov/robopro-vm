@@ -658,43 +658,47 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     /**
      * Turn on LED.
      * @param {object} args - the block's arguments.
+     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
      */
     ledTurnOn (args) {
         const ledIndex = args.LED_INDEX;
         log.info(`[ledTurnOn] ledIndex: ${ledIndex}`);
         this._ledState[ledIndex] = 1;
-        this._updateShiftRegister();
+        return this._updateShiftRegister();
     }
 
     /**
      * Turn off LED.
      * @param {object} args - the block's arguments.
+     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
      */
     ledTurnOff (args) {
         const ledIndex = args.LED_INDEX;
         log.info(`[ledTurnOff] ledIndex: ${ledIndex}`);
         this._ledState[ledIndex] = 0;
-        this._updateShiftRegister();
+        return this._updateShiftRegister();
     }
 
     /**
      * Turn on color LED.
      * @param {object} args - the block's arguments.
+     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
      */
     colorLedTurnOn (args) {
         const ledPin = args.LED_PIN;
         log.info(`[colorLedTurnOn] ledPin: ${ledPin}`);
-        this._peripheral.setDigitalOutput(ledPin, Level.High);
+        return this._peripheral.setDigitalOutput(ledPin, Level.High);
     }
 
     /**
      * Turn off color LED.
      * @param {object} args - the block's arguments.
+     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
      */
     colorLedTurnOff (args) {
         const ledPin = args.LED_PIN;
         log.info(`[colorLedTurnOff] ledPin: ${ledPin}`);
-        this._peripheral.setDigitalOutput(ledPin, Level.Low);
+        return this._peripheral.setDigitalOutput(ledPin, Level.Low);
     }
 
     /**
@@ -765,23 +769,34 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     }
 
     _updateShiftRegister () {
-        this._peripheral.setDigitalOutput(PinsMap.LatchLED, Level.Low);
-        let pinState;
-        this._peripheral.setDigitalOutput(PinsMap.DataLED, Level.Low);
-        this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low);
-        for (let i = 0; i < this._ledState.length; i++) {
-            this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low);
-            if (this._ledState[i] > 0) {
-                pinState = Level.High;
-            } else {
-                pinState = Level.Low;
-            }
-            this._peripheral.setDigitalOutput(PinsMap.DataLED, pinState);
-            this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.High);
-            this._peripheral.setDigitalOutput(PinsMap.DataLED, Level.Low);
-        }
-        this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low);
-        this._peripheral.setDigitalOutput(PinsMap.LatchLED, Level.High);
+        return Promise.all([
+            this._peripheral.setDigitalOutput(PinsMap.LatchLED, Level.Low),
+            this._peripheral.setDigitalOutput(PinsMap.DataLED, Level.Low),
+            this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low)
+        ])
+            .then(() => {
+                for (let i = 0; i < this._ledState.length; i++) {
+                    this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low)
+                        .then(() => {
+                            let pinState;
+                            if (this._ledState[i] > 0) {
+                                pinState = Level.High;
+                            } else {
+                                pinState = Level.Low;
+                            }
+                            return pinState;
+                        })
+                        .then(pinState => Promise.all([
+                            this._peripheral.setDigitalOutput(PinsMap.DataLED, pinState),
+                            this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.High),
+                            this._peripheral.setDigitalOutput(PinsMap.DataLED, Level.Low)
+                        ]));
+                }
+            })
+            .then(() => Promise.all([
+                this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low),
+                this._peripheral.setDigitalOutput(PinsMap.LatchLED, Level.High)
+            ]));
     }
 
     /**
