@@ -106,6 +106,7 @@ const PinsMap = {
 const MonitoringPins = ['D8', 'D9', 'D10', 'D11', 'D12', 'A0', 'A2', 'A3', 'A4'];
 
 const IN_SENSOR_MIN = 0;
+const IN_SOUND_SENSOR_MIN = 200;
 const IN_SENSOR_MAX = 1023;
 const OUT_SENSOR_MIN = 0;
 const OUT_SENSOR_MAX = 100;
@@ -135,6 +136,7 @@ class RoboProStation extends ArduinoPeripheral {
      * @private
      */
     mapPinValue (pin, value) {
+        let inSensorMin = IN_SENSOR_MIN;
         switch (pin) {
         case PinsMap.TempSensor: {
             const volts = value * 5.0 / 1024.0;
@@ -143,15 +145,17 @@ class RoboProStation extends ArduinoPeripheral {
         case PinsMap.LightSensor:
             value = IN_SENSOR_MAX - value;
             break;
+        case PinsMap.SoundSensor:
+            inSensorMin = IN_SOUND_SENSOR_MIN;
+            break;
         }
-
         switch (pin) {
         case Pins.A0:
         case Pins.A1:
         case Pins.A2:
         case Pins.A3:
         case Pins.A4:
-            value = ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
+            value = ((value - inSensorMin) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - inSensorMin)) +
                 OUT_SENSOR_MIN;
             return Math.round(value);
         }
