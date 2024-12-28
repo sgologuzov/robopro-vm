@@ -595,7 +595,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                             PIN: {
                                 type: ArgumentType.STRING,
                                 menu: 'digitalOutputPins',
-                                defaultValue: Pins.D0
+                                defaultValue: Pins.D2
                             },
                             LEVEL: {
                                 type: ArgumentType.STRING,
