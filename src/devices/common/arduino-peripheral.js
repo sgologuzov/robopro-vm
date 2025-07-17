@@ -53,7 +53,9 @@ const Level = {
 const Mode = {
     Input: 'INPUT',
     Output: 'OUTPUT',
-    InputPullup: 'INPUT_PULLUP'
+    InputPullup: 'INPUT_PULLUP',
+    I2C: 'I2C',
+    OneWire: 'ONEWIRE'
 };
 
 /**
@@ -155,6 +157,12 @@ class ArduinoPeripheral extends Emitter {
         this._startHeartbeat = this._startHeartbeat.bind(this);
         this._listenHeartbeat = this._listenHeartbeat.bind(this);
         this._handleProgramModeUpdate = this._handleProgramModeUpdate.bind(this);
+        /**
+         * 1-wire devices
+         * @type {?Map}
+         * @private
+         */
+        this._oneWireDevices = Map();
     }
 
     /**
@@ -508,8 +516,21 @@ class ArduinoPeripheral extends Emitter {
                 case Mode.InputPullup:
                     mode = this._firmata.MODES.PULLUP;
                     break;
+                case Mode.I2C:
+                    mode = this._firmata.MODES.I2C;
+                    break;
+                case Mode.OneWire:
+                    mode = this._firmata.MODES.ONEWIRE;
+                    break;
                 }
                 this._firmata.pinMode(pin, mode);
+
+                // Инициализация пинов
+                switch (mode) {
+                case this._firmata.MODES.ONEWIRE:
+                    this._initOneWirePin(pin);
+                    break;
+                }
                 window.setTimeout(() => {
                     resolve();
                 }, FrimataWriteTimeout);
@@ -590,6 +611,33 @@ class ArduinoPeripheral extends Emitter {
             return new Promise(resolve => {
                 this._firmata.analogRead(pin, value => {
                     resolve(value);
+                });
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataReadTimeout);
+            });
+        }
+    }
+
+    readDS18B20 (pin, deviceIndex) {
+        if (this.isReady()) {
+            pin = this.parsePin(pin);
+            let devices = this._oneWireDevices.get(pin).filter(item => item[0] === 0x28);
+            let device = devices[deviceIndex];
+            // TODO: устройство не найдено
+            this._firmata.sendOneWireReset(pin); // Reset
+            this._firmata.sendOneWireWrite(pin, device, 0x44); // Select device, process temp
+            this._firmata.sendOneWireDelay(pin, 1000); // Delay - prevents premature reading
+            this._firmata.sendOneWireReset(pin); // Reset
+
+            return new Promise(resolve => {
+                this._firmata.sendOneWireWriteAndRead(pin, device, 0xBE, 9, (err, data) => {
+                    if (err) {
+                        resolve(err);
+                    }
+
+                    const temp = ((data[1] << 8) | data[0]) / 16.0;
+                    resolve(temp.toFixed(1));
                 });
                 window.setTimeout(() => {
                     resolve();
@@ -695,6 +743,40 @@ class ArduinoPeripheral extends Emitter {
                     value: {...this._monitorData}
                 }));
             }
+        }
+    }
+
+    /**
+     * @param {PIN} pin - the pin to init.
+     * @return {Promise} - a Promise that resolves when read from peripheral.
+     */
+    _initOneWirePin (pin) {
+        console.log(`[_initOneWirePin] pin: ${pin}`);
+        if (this.isReady()) {
+            this._firmata.sendOneWireConfig(pin, false);
+            return new Promise(resolve => {
+                this._firmata.sendOneWireSearch(pin, (err, devices) => {
+                    console.log('[_initOneWirePin] err:', err);
+                    console.log('[_initOneWirePin] devices:', devices);
+                    if (err) {
+                        resolve(err);
+                        return;
+                    }
+                    const len = devices.length;
+                    let i = 0;
+                    console.log('----------------------');
+                    console.log('1-Wire Addresses:');
+                    for (i = 0; i < len; i++) {
+                        console.log(devices[i]);
+                        this._oneWireDevices = this._oneWireDevices.set(pin, devices);
+                    }
+                    console.log('----------------------');
+                    resolve();
+                    window.setTimeout(() => {
+                        resolve();
+                    }, FrimataReadTimeout);
+                });
+            });
         }
     }
 }

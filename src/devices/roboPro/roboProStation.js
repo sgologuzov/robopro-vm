@@ -12,6 +12,7 @@ const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 const MathUtil = require('../../util/math-util');
 const OpenBlockArduinoUnoDevice = require('../arduinoUno/arduinoUno');
+const tm1637 = require('../../lib/TM1637Display');
 const formatMessage = require('format-message');
 const log = require('../../util/log');
 
@@ -78,7 +79,9 @@ const Level = {
 const Mode = {
     Input: 'INPUT',
     Output: 'OUTPUT',
-    InputPullup: 'INPUT_PULLUP'
+    InputPullup: 'INPUT_PULLUP',
+    I2C: 'I2C',
+    OneWire: 'ONEWIRE'
 };
 
 const PinsMap = {
@@ -110,9 +113,9 @@ const IN_SOUND_SENSOR_MIN = 200;
 const IN_SENSOR_MAX = 1023;
 const OUT_SENSOR_MIN = 0;
 const OUT_SENSOR_MAX = 100;
-const TEMP_VOLTS_PER_DEGREE = 0.02; // 0.02 for TMP37, 0.01 for TMP35/36
-const TEMP_OUTPUT_VOLTAGE = 0.25; // 0.25 for TMP35, 0.75 for TMP36, 0.5 for TMP37
-const TEMP_OFFSET_VALUE = TEMP_OUTPUT_VOLTAGE - (25 * TEMP_VOLTS_PER_DEGREE); // calculating the offset for 0 °C
+// const TEMP_VOLTS_PER_DEGREE = 0.02; // 0.02 for TMP37, 0.01 for TMP35/36
+// const TEMP_OUTPUT_VOLTAGE = 0.25; // 0.25 for TMP35, 0.75 for TMP36, 0.5 for TMP37
+// const TEMP_OFFSET_VALUE = TEMP_OUTPUT_VOLTAGE - (25 * TEMP_VOLTS_PER_DEGREE); // calculating the offset for 0 °C
 
 /**
  * Manage communication with an Arduino Nano peripheral over a OpenBlock Link client socket.
@@ -139,8 +142,8 @@ class RoboProStation extends ArduinoPeripheral {
         let inSensorMin = IN_SENSOR_MIN;
         switch (pin) {
         case PinsMap.TempSensor: {
-            const volts = value * 5.0 / 1024.0;
-            return Math.round((volts - TEMP_OFFSET_VALUE) / TEMP_VOLTS_PER_DEGREE);
+            // const volts = value * 5.0 / 1024.0;
+            return Math.round(value);
         }
         case PinsMap.LightSensor:
             value = IN_SENSOR_MAX - value;
@@ -395,6 +398,154 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
         ];
     }
 
+    get INDICATOR_BRIGHTNESS_MENU () {
+        return [
+            {
+                text: '0',
+                value: 0
+            },
+            {
+                text: '1',
+                value: 1
+            },
+            {
+                text: '2',
+                value: 2
+            },
+            {
+                text: '3',
+                value: 3
+            },
+            {
+                text: '4',
+                value: 4
+            },
+            {
+                text: '5',
+                value: 5
+            },
+            {
+                text: '6',
+                value: 6
+            },
+            {
+                text: '7',
+                value: 7
+            }
+        ];
+    }
+
+    get INDICATOR_DIGITS_MENU () {
+        return [
+            {
+                text: '1',
+                value: 0
+            },
+            {
+                text: '2',
+                value: 1
+            },
+            {
+                text: '3',
+                value: 2
+            },
+            {
+                text: '4',
+                value: 3
+            }
+        ];
+    }
+
+    get INDICATOR_VALUES_MENU () {
+        return [
+            {
+                text: '0',
+                value: '0'
+            },
+            {
+                text: '1',
+                value: '1'
+            },
+            {
+                text: '2',
+                value: '2'
+            },
+            {
+                text: '3',
+                value: '3'
+            },
+            {
+                text: '4',
+                value: '4'
+            },
+            {
+                text: '5',
+                value: '5'
+            },
+            {
+                text: '6',
+                value: '6'
+            },
+            {
+                text: '7',
+                value: '7'
+            },
+            {
+                text: '8',
+                value: '8'
+            },
+            {
+                text: '9',
+                value: '9'
+            },
+            {
+                text: '9',
+                value: '9'
+            },
+            {
+                text: 'A',
+                value: 'A'
+            },
+            {
+                text: 'C',
+                value: 'C'
+            },
+            {
+                text: 'F',
+                value: 'F'
+            },
+            {
+                text: '-',
+                value: '-'
+            },
+            {
+                text: '\u00B0C',
+                value: '\u00B0C'
+            }
+        ];
+    }
+
+    get ON_OFF_MENU () {
+        return [
+            {
+                text: formatMessage({
+                    id: 'roboPro.onOffMenu.on',
+                    default: 'on',
+                    description: 'label for on'
+                }),
+                value: 'on'
+            },
+            {
+                text: formatMessage({
+                    id: 'roboPro.onOffMenu.off',
+                    default: 'off',
+                    description: 'label for off'
+                }),
+                value: 'off'
+            }
+        ];
+    }
+
     /**
      * Construct a set of Arduino blocks.
      * @param {Runtime} runtime - the OpenBlock runtime.
@@ -411,12 +562,18 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     }
 
     _init () {
+        this._peripheral.setPinMode(PinsMap.TempSensor, Mode.OneWire);
         this._peripheral.setPinMode(PinsMap.LatchLED, Mode.Output);
-        this._peripheral.setPinMode(PinsMap.Button1, Mode.Input);
-        this._peripheral.setPinMode(PinsMap.Button2, Mode.Input);
-        this._peripheral.setPinMode(PinsMap.Button3, Mode.Input);
-        this._peripheral.setPinMode(PinsMap.Button4, Mode.Input);
-        this._peripheral.setPinMode(PinsMap.Button5, Mode.Input);
+        this._peripheral.setPinMode(PinsMap.Button1, Mode.InputPullup);
+        this._peripheral.setPinMode(PinsMap.Button2, Mode.InputPullup);
+        this._peripheral.setPinMode(PinsMap.Button3, Mode.InputPullup);
+        this._peripheral.setPinMode(PinsMap.Button4, Mode.InputPullup);
+        this._peripheral.setPinMode(PinsMap.Button5, Mode.InputPullup);
+        this.display = tm1637({
+            clk: PinsMap.ClkLED,
+            dio: PinsMap.DataLED,
+            board: this._peripheral._firmata
+        });
     }
 
     /**
@@ -623,6 +780,90 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                                 defaultValue: '255'
                             }
                         }
+                    },
+                    {
+                        opcode: 'setIndicatorBrightness',
+                        text: formatMessage({
+                            id: 'roboPro.station.setIndicatorBrightness',
+                            default: 'set indicator brightness [VALUE]',
+                            description: 'roboProStation set indicator brightness'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            VALUE: {
+                                type: ArgumentType.UINT8_NUMBER,
+                                menu: 'indicatorBrightness',
+                                defaultValue: 3
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'setIndicatorDigitValue',
+                        text: formatMessage({
+                            id: 'roboPro.station.setIndicatorDigitValue',
+                            default: 'set indicator digit [DIGIT] value [VALUE]',
+                            description: 'roboProStation set indicator digit value'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            DIGIT: {
+                                type: ArgumentType.UINT8_NUMBER,
+                                menu: 'indicatorDigits',
+                                defaultValue: 0
+                            },
+                            VALUE: {
+                                type: ArgumentType.STRING,
+                                menu: 'indicatorValues',
+                                defaultValue: '0'
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'turnIndicatorSeparator',
+                        text: formatMessage({
+                            id: 'roboPro.station.turnIndicatorSeparator',
+                            default: 'turn indicator separator (:) [VALUE]',
+                            description: 'roboProStation set indicator separator on/off'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            VALUE: {
+                                type: ArgumentType.STRING,
+                                menu: 'onOff',
+                                defaultValue: 'on'
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'turnIndicator',
+                        text: formatMessage({
+                            id: 'roboPro.station.turnIndicatorOn',
+                            default: 'turn indicator [VALUE]',
+                            description: 'roboProStation turn indicator'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            VALUE: {
+                                type: ArgumentType.STRING,
+                                menu: 'onOff',
+                                defaultValue: 'on'
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'setIndicatorValue',
+                        text: formatMessage({
+                            id: 'roboPro.station.setIndicatorValue',
+                            default: 'set indicator value [VALUE]',
+                            description: 'roboProStation set indicator value'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            VALUE: {
+                                type: ArgumentType.STRING,
+                                defaultValue: '0000'
+                            }
+                        }
                     }
                 ],
                 menus: {
@@ -653,6 +894,18 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                     },
                     sensors: {
                         items: this.SENSORS_MENU
+                    },
+                    indicatorBrightness: {
+                        items: this.INDICATOR_BRIGHTNESS_MENU
+                    },
+                    indicatorDigits: {
+                        items: this.INDICATOR_DIGITS_MENU
+                    },
+                    indicatorValues: {
+                        items: this.INDICATOR_VALUES_MENU
+                    },
+                    onOff: {
+                        items: this.ON_OFF_MENU
                     }
                 }
             }
@@ -705,6 +958,40 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
         return this._peripheral.setDigitalOutput(ledPin, Level.Low);
     }
 
+    setIndicatorBrightness (args) {
+        const value = args.VALUE;
+        this.display.setBrightness(value);
+    }
+
+    setIndicatorDigitValue (args) {
+        const digit = args.DIGIT;
+        const value = args.VALUE;
+        this.display.setDigit(digit, value);
+    }
+
+    setIndicatorValue (args) {
+        const value = args.VALUE;
+        this.display.show(value);
+    }
+
+    turnIndicatorSeparator (args) {
+        const value = args.VALUE;
+        if (value === 'on') {
+            this.display.separatorOn();
+        } else {
+            this.display.separatorOff();
+        }
+    }
+
+    turnIndicator (args) {
+        const value = args.VALUE;
+        if (value === 'on') {
+            this.display.on();
+        } else {
+            this.display.off();
+        }
+    }
+
     /**
      * Play a note.
      * @param {object} args - the block's arguments.
@@ -738,7 +1025,15 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      * @return {Promise} - a Promise that resolves when read from peripheral.
      */
     readSensor (args) {
-        const promise = this._peripheral.readAnalogPin(args.PIN);
+        let promise;
+        switch (args.PIN) {
+        case PinsMap.TempSensor:
+            promise = this._peripheral.readDS18B20(args.PIN, 0);
+            break;
+        default:
+            promise = this._peripheral.readAnalogPin(args.PIN);
+            break;
+        }
         return promise.then(value => this._peripheral.mapPinValue(args.PIN, value));
     }
 
