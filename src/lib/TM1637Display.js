@@ -160,28 +160,32 @@ class TM1637Display {
     }
 
     setDigit (pos, str) {
-        const index = str.charCodeAt(0) - 32;
-        const segCode = codigitToSegmentASCII[index];
+        let segCode = 0x00;
+        if (str !== undefined) {
+            const index = str.charCodeAt(0) - 32;
+            segCode = codigitToSegmentASCII[index];
+        }
         this.digits[pos] = segCode;
         this.sendData(pos, segCode);
     }
 
     show (str) {
-        this.digits = (`${str}`)
-            .split('')
-            .reduce((acc, num) => {
-                if (num === '.' || num === ':') {
-                    // show point or colon for previous number if needed
-                    acc[acc.length - 1] |= 0b10000000;
-                } else {
-                    const index = num.charCodeAt(0) - 32;
-                    const segCode = codigitToSegmentASCII[index];
-                    acc.push(segCode || 0);
+        this.digits = [0x00, 0x00, 0x00, 0x00];
+        let nums = (`${str}`).split('');
+        for (let i = 0, j = 0; i < nums.length && j < 4; i++) {
+            let num = nums[i];
+            if (num === '.' || num === ':') {
+                // show point or colon for previous number if needed
+                if (j > 0) {
+                    this.digits[j - 1] |= 0b10000000;
                 }
-                return acc;
-            }, [])
-            .filter((_, i) => i < 4);
-
+            } else {
+                const index = num.charCodeAt(0) - 32;
+                const segCode = codigitToSegmentASCII[index];
+                this.digits[j] = segCode || 0;
+                j++;
+            }
+        }
         this.start(); // Data command set
         this.writeByte(DATA_CMD); // Normal mode, automatic address increase, write data to the display register
         this.stop();

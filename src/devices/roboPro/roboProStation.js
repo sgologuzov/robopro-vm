@@ -12,9 +12,24 @@ const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 const MathUtil = require('../../util/math-util');
 const OpenBlockArduinoUnoDevice = require('../arduinoUno/arduinoUno');
+const pixel = require('../../lib/node-pixel');
 const tm1637 = require('../../lib/TM1637Display');
 const formatMessage = require('format-message');
 const log = require('../../util/log');
+const Color = require("../../util/color");
+
+/**
+ * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
+ * @type {string}
+ */
+// eslint-disable-next-line max-len
+const blockIconURI = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB3aWR0aD0iMjdtbSIKICAgaGVpZ2h0PSIyN21tIgogICB2aWV3Qm94PSIwIDAgMjcgMjciCiAgIHZlcnNpb249IjEuMSIKICAgaWQ9InN2ZzMzOCIKICAgaW5rc2NhcGU6dmVyc2lvbj0iMS4yLjIgKGIwYTg0ODY1NDEsIDIwMjItMTItMDEpIgogICB4bWxuczppbmtzY2FwZT0iaHR0cDovL3d3dy5pbmtzY2FwZS5vcmcvbmFtZXNwYWNlcy9pbmtzY2FwZSIKICAgeG1sbnM6c29kaXBvZGk9Imh0dHA6Ly9zb2RpcG9kaS5zb3VyY2Vmb3JnZS5uZXQvRFREL3NvZGlwb2RpLTAuZHRkIgogICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDxzb2RpcG9kaTpuYW1lZHZpZXcKICAgICBpZD0ibmFtZWR2aWV3MzQwIgogICAgIHBhZ2Vjb2xvcj0iI2ZmZmZmZiIKICAgICBib3JkZXJjb2xvcj0iIzY2NjY2NiIKICAgICBib3JkZXJvcGFjaXR5PSIxLjAiCiAgICAgaW5rc2NhcGU6c2hvd3BhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6cGFnZW9wYWNpdHk9IjAuMCIKICAgICBpbmtzY2FwZTpwYWdlY2hlY2tlcmJvYXJkPSIwIgogICAgIGlua3NjYXBlOmRlc2tjb2xvcj0iI2QxZDFkMSIKICAgICBpbmtzY2FwZTpkb2N1bWVudC11bml0cz0ibW0iCiAgICAgc2hvd2dyaWQ9ImZhbHNlIgogICAgIGlua3NjYXBlOnpvb209IjMuMTk5OTQzOSIKICAgICBpbmtzY2FwZTpjeD0iMTY1LjE1OTE1IgogICAgIGlua3NjYXBlOmN5PSIxMzguOTA4NjkiCiAgICAgaW5rc2NhcGU6d2luZG93LXdpZHRoPSIxOTIwIgogICAgIGlua3NjYXBlOndpbmRvdy1oZWlnaHQ9IjEyMzYiCiAgICAgaW5rc2NhcGU6d2luZG93LXg9IjI1NjAiCiAgICAgaW5rc2NhcGU6d2luZG93LXk9IjAiCiAgICAgaW5rc2NhcGU6d2luZG93LW1heGltaXplZD0iMCIKICAgICBpbmtzY2FwZTpjdXJyZW50LWxheWVyPSJsYXllcjEiIC8+CiAgPGRlZnMKICAgICBpZD0iZGVmczMzNSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMYXllciAxIgogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaWQ9ImxheWVyMSI+CiAgICA8cGF0aAogICAgICAgZD0iTSA2LjU5MzA0NzIsMjUuNDUxODMzIEggMTkuODYzODE3IGMgMC4wNTk5LC0wLjAxNzMyIDAuMTE4NSwtMC4wMzYxMiAwLjE4MDQ4LC0wLjA0NTUxIDEuNjI4MTgsLTAuMjQ3MzY3IDIuOTE0ODIsLTEuNzMwNDQyIDIuOTEyMzksLTMuMzc5NDYzIC03LjFlLTQsLTAuNDUxNTU1IC0wLjMyODQsLTAuNzk2OTIzIC0wLjc4NzI5LC0wLjc3NzE2OCAtMC40MDk0LDAuMDE3NjQgLTAuNjYwNTEsMC4zNDY5NTYgLTAuNjg1NTUsMC43MzczNCAtMC4wNzg3LDEuMjIwMzYxIC0wLjg5NzU0LDEuOTg4MDA0IC0yLjEyMDEyLDEuOTg5ODc0IC0wLjYwMDI1LDAuMDAxMSAtMS4yMDA1LDIuMTJlLTQgLTEuODAwNzUsMi4xMmUtNCBoIC0wLjUyOTI0IHYgLTAuNTM2NTA0IGMgMCwtMS4wMjk4OTcgMC4wMDEsLTIuMDU5NzU5IC0zLjVlLTQsLTMuMDg5NzYzIC03LjFlLTQsLTAuNTMwNDcgLTAuMjc5MTYsLTAuODMyNjI0IC0wLjgxNTk0LC0wLjgzMzQzNSAtMS45OTQ3MSwtMC4wMDI4IC0zLjk4OTU5LC0wLjAwMzIgLTUuOTg0MzQsMi4xMWUtNCAtMC41MTk2Njk4LDAuMDAxMSAtMC44MDY4Njk4LDAuMzAwNDI1IC0wLjgwNzc3OTgsMC44MTY5OTcgLTAuMDAyLDEuMDQ1OTg0IC03LjFlLTQsMi4wOTIwMDMgLTcuMWUtNCwzLjEzODAyMiB2IDAuNTA0NDcyIGggLTAuMjM1ODcgYyAtMC42OTI0MywwIC0xLjM4NDg2LDMuNTJlLTQgLTIuMDc3MjksLTIuMTJlLTQgLTEuMjkzMjQsLTAuMDAxMSAtMi4xMzU5OSwtMC44Mzk3NTEgLTIuMTM2MzUsLTIuMTM0MTYgLTAuMDAxLC00LjM3MTA0OSA3LjFlLTQsLTguNzQyMjA0IC0wLjAwNCwtMTMuMTEzMjE3OCAtMy42ZS00LC0wLjI0NTUzMyAwLjA4OTIsLTAuNDIwMjI4IDAuMjgyNDMsLTAuNTcwMDg4IDIuMjA5NDgsLTEuNzE0ODg1IDQuNDE0MzMsLTMuNDM1NTU1IDYuNjIxNDc5OCwtNS4xNTM0MzggMC44OTc4OSwtMC42OTg5MjIgMS44MDY0NywtMC43MDU3NjYgMi43MDU4OCwtMC4wMDUyIDIuMjA2NTgsMS43MTg0ODMgNC40MTEwOCwzLjQzOTUwNiA2LjYyMDgxLDUuMTUzODk3IDAuMjAxNTEsMC4xNTYzNSAwLjI4NjYsMC4zMzk2NTMgMC4yODYsMC41OTM4NjQgLTAuMDA1LDIuNzE2NTI0OCAtMC4wMDQsNS40MzMxOTA4IC0wLjAwNCw4LjE0OTgyMDggMCwwLjA5OTAzIC0wLjAwMiwwLjE5ODYxNCAwLjAwNSwwLjI5NzQyNyAwLjAzMzUsMC40MjIxNjggMC40NjA2MiwwLjczMzQ5NCAwLjg3MzA1LDAuNjM5OTM3IDAuNDIyNTIsLTAuMDk1ODkgMC41OTQ3OCwtMC40MTQ0MDcgMC41OTUwMywtMC44Mjc2NSAwLjAwMSwtMS4zNDc1NzMgMC4wMDEsLTIuNjk1MDc2IDAuMDAxLC00LjA0MjY0OSBoIDEuNGUtNCBsIC0xLjRlLTQsLTAuMDE5NTEgdiAtMC4xMDQxMDQgbCAtMS4xZS00LC0yLjQ5MzUzNCBWIDkuNTQ1ODAzMiBsIDEuNTM5OTQsMS4yMTc5Mjc4IGMgMC4yMTIzLDAuMTYxOTI1IDAuNDQ1OTgsMC4yOTI0MTcgMC43MjIwMywwLjIyODIxMiAwLjMwMDY0LC0wLjA2OTg5IDAuNDk0MzgsLTAuMjQyODE3IDAuNTY4ODksLTAuNTQ1OTIzIDAuMDc1NiwtMC4zMDc3MjcgLTAuMDE1LC0wLjU1OTc1MDggLTAuMjYyMTEsLTAuNzU2MjQ3OCAtMC4yNDIwMSwtMC4xOTIzNyAtMC42NjUwMiwtMC41MjcwMTQgLTEuMTI2ODEsLTAuODkxNjQ0IC0wLjAzNTQsLTAuMDM2NTUgLTAuMDczOSwtMC4wNzEyNiAtMC4xMTUsLTAuMTAzNjQ2IC0wLjM1Mzg0LC0wLjI3ODcyOSAtMC43MDU0NSwtMC41NjAzMTYgLTEuMDY3NjEsLTAuODI4MjUgbCAtMC4wNDQ0LC0wLjAzNDkzIGMgLTAuMTU1NjgsLTAuMTMxODY4IC0wLjIxOTY0LC0wLjI5MzMzNCAtMC4yMTgyMywtMC41MDQ2MTMgMC4wMDYsLTAuOTU2NDEzIDAuMDA0LC0xLjkxMjc5MiAwLjAwMiwtMi44NjkxNzEgLTEuMWUtNCwtMC4wODQ3NCAzLjVlLTQsLTAuMTcxMTMyIC0wLjAxMjQsLTAuMjU1MjY5IC0wLjA1NjMsLTAuMzY3MTcxIC0wLjM2OTk2LC0wLjY2Njk5NiAtMC43NTA5MiwtMC42NDg0NCAtMC40MDczNSwwLjAxOTg2IC0wLjY5OTg4LDAuMzI2Nzc4IC0wLjcwNzQyLDAuNzMzMjgzIC0wLjAwOSwwLjQ5MzQ2NCAtMC4wMDIsMC45ODcwMzUgLTAuMDA0LDEuNDgwNDk5IC0yLjVlLTQsMC4wODQyOCAtMC4wMTE1LDAuMTY3Mjg3IC0wLjAxOCwwLjI1MDk2NiBsIC0wLjAzMjQsMC40MTY3MzUgLTAuMzQwMTEsLTAuMjQzMDYzIGMgLTAuMDc3MSwtMC4wNTUwMyAtMC4xNTYwMywtMC4xMDc0OTEgLTAuMjMwNzgsLTAuMTY1NzcgLTEuNzkwNTYsLTEuMzk1NDEgLTMuNTgxMjIsLTIuNzkwNzE0IC01LjM3MDk3LC00LjE4NzA0MSAtMS40MjAyNCwtMS4xMDgxMDggLTMuMDk5NzEsLTEuMTExMTQyIC00LjUyMDIsLTAuMDAxOCAtMi4zMzg0NDk4LDEuODI2NDMyIC00LjY4MDI1OTgsMy42NDg2NjcgLTcuMDIwNjg5OCw1LjQ3MjY2NiAtMC42MTk3NSwwLjQ4Mjg4MSAtMi40MDM1NywxLjg5MDQ5NyAtMy4wMTg1Njk5OSwyLjM3OTQ0NiAtMC4yNDcxNSwwLjE5NjQ5NyAtMC4zMzc3MSwwLjQ0ODUyMDggLTAuMjYyMTEsMC43NTYyNDc4IDAuMDc0NSwwLjMwMzEwNiAwLjI2ODI1LDAuNDc2MDM3IDAuNTY4ODg5OTksMC41NDU5MjMgMC4yNzYwNCwwLjA2NDIxIDAuNTA5NzIsLTAuMDY2MjkgMC43MjIwMywtMC4yMjgyMTIgbCAxLjUzOTk0LC0xLjIxNzkyNzggdiAwLjgwMjQ5NzggYyAwLDMuODUyMTQ5IC0wLjAwMiw3LjcwNDI5OCAwLjAwMSwxMS41NTYzNDIgMTBlLTQsMS41MjI5NzQgMC44NDkxMywyLjc5MjQ0MiAyLjI4MjA0LDMuMzI5MTkyIDAuMjYyMDEsMC4wOTgxMSAwLjUzOTY4LDAuMTQ3ODg1IDAuODA5OTEsMC4yMTgwMTcgeiBtIDQuMzE2ODI5OCwtMS40OTIgdiAtMi45NTM1NTYgaCA0LjYzODQ5IHYgMi45NTM1NTYgeiIKICAgICAgIHN0eWxlPSJmaWxsOiNmZmZmZmY7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlLXdpZHRoOjAuMzUyNzc3O2ZpbGwtb3BhY2l0eToxIgogICAgICAgaWQ9InBhdGg2NiIgLz4KICA8L2c+Cjwvc3ZnPgo=';
+/**
+ * Icon svg to be displayed in the category menu, encoded as a data URI.
+ * @type {string}
+ */
+// eslint-disable-next-line max-len
+const menuIconURI = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB3aWR0aD0iMjdtbSIKICAgaGVpZ2h0PSIyN21tIgogICB2aWV3Qm94PSIwIDAgMjcgMjciCiAgIHZlcnNpb249IjEuMSIKICAgaWQ9InN2ZzMzOCIKICAgaW5rc2NhcGU6dmVyc2lvbj0iMS4yLjIgKGIwYTg0ODY1NDEsIDIwMjItMTItMDEpIgogICB4bWxuczppbmtzY2FwZT0iaHR0cDovL3d3dy5pbmtzY2FwZS5vcmcvbmFtZXNwYWNlcy9pbmtzY2FwZSIKICAgeG1sbnM6c29kaXBvZGk9Imh0dHA6Ly9zb2RpcG9kaS5zb3VyY2Vmb3JnZS5uZXQvRFREL3NvZGlwb2RpLTAuZHRkIgogICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDxzb2RpcG9kaTpuYW1lZHZpZXcKICAgICBpZD0ibmFtZWR2aWV3MzQwIgogICAgIHBhZ2Vjb2xvcj0iI2ZmZmZmZiIKICAgICBib3JkZXJjb2xvcj0iIzY2NjY2NiIKICAgICBib3JkZXJvcGFjaXR5PSIxLjAiCiAgICAgaW5rc2NhcGU6c2hvd3BhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6cGFnZW9wYWNpdHk9IjAuMCIKICAgICBpbmtzY2FwZTpwYWdlY2hlY2tlcmJvYXJkPSIwIgogICAgIGlua3NjYXBlOmRlc2tjb2xvcj0iI2QxZDFkMSIKICAgICBpbmtzY2FwZTpkb2N1bWVudC11bml0cz0ibW0iCiAgICAgc2hvd2dyaWQ9ImZhbHNlIgogICAgIGlua3NjYXBlOnpvb209IjMuMTk5OTQzOSIKICAgICBpbmtzY2FwZTpjeD0iMjE1Ljk0MTI5IgogICAgIGlua3NjYXBlOmN5PSIxMzguOTA4NjkiCiAgICAgaW5rc2NhcGU6d2luZG93LXdpZHRoPSIxOTIwIgogICAgIGlua3NjYXBlOndpbmRvdy1oZWlnaHQ9IjEyMzYiCiAgICAgaW5rc2NhcGU6d2luZG93LXg9IjI1NjAiCiAgICAgaW5rc2NhcGU6d2luZG93LXk9IjAiCiAgICAgaW5rc2NhcGU6d2luZG93LW1heGltaXplZD0iMCIKICAgICBpbmtzY2FwZTpjdXJyZW50LWxheWVyPSJsYXllcjEiIC8+CiAgPGRlZnMKICAgICBpZD0iZGVmczMzNSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMYXllciAxIgogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaWQ9ImxheWVyMSI+CiAgICA8cGF0aAogICAgICAgZD0iTSA2LjU5MzA0NzIsMjUuNDUxODMzIEggMTkuODYzODE3IGMgMC4wNTk5LC0wLjAxNzMyIDAuMTE4NSwtMC4wMzYxMiAwLjE4MDQ4LC0wLjA0NTUxIDEuNjI4MTgsLTAuMjQ3MzY3IDIuOTE0ODIsLTEuNzMwNDQyIDIuOTEyMzksLTMuMzc5NDYzIC03LjFlLTQsLTAuNDUxNTU1IC0wLjMyODQsLTAuNzk2OTIzIC0wLjc4NzI5LC0wLjc3NzE2OCAtMC40MDk0LDAuMDE3NjQgLTAuNjYwNTEsMC4zNDY5NTYgLTAuNjg1NTUsMC43MzczNCAtMC4wNzg3LDEuMjIwMzYxIC0wLjg5NzU0LDEuOTg4MDA0IC0yLjEyMDEyLDEuOTg5ODc0IC0wLjYwMDI1LDAuMDAxMSAtMS4yMDA1LDIuMTJlLTQgLTEuODAwNzUsMi4xMmUtNCBoIC0wLjUyOTI0IHYgLTAuNTM2NTA0IGMgMCwtMS4wMjk4OTcgMC4wMDEsLTIuMDU5NzU5IC0zLjVlLTQsLTMuMDg5NzYzIC03LjFlLTQsLTAuNTMwNDcgLTAuMjc5MTYsLTAuODMyNjI0IC0wLjgxNTk0LC0wLjgzMzQzNSAtMS45OTQ3MSwtMC4wMDI4IC0zLjk4OTU5LC0wLjAwMzIgLTUuOTg0MzQsMi4xMWUtNCAtMC41MTk2Njk4LDAuMDAxMSAtMC44MDY4Njk4LDAuMzAwNDI1IC0wLjgwNzc3OTgsMC44MTY5OTcgLTAuMDAyLDEuMDQ1OTg0IC03LjFlLTQsMi4wOTIwMDMgLTcuMWUtNCwzLjEzODAyMiB2IDAuNTA0NDcyIGggLTAuMjM1ODcgYyAtMC42OTI0MywwIC0xLjM4NDg2LDMuNTJlLTQgLTIuMDc3MjksLTIuMTJlLTQgLTEuMjkzMjQsLTAuMDAxMSAtMi4xMzU5OSwtMC44Mzk3NTEgLTIuMTM2MzUsLTIuMTM0MTYgLTAuMDAxLC00LjM3MTA0OSA3LjFlLTQsLTguNzQyMjA0IC0wLjAwNCwtMTMuMTEzMjE3OCAtMy42ZS00LC0wLjI0NTUzMyAwLjA4OTIsLTAuNDIwMjI4IDAuMjgyNDMsLTAuNTcwMDg4IDIuMjA5NDgsLTEuNzE0ODg1IDQuNDE0MzMsLTMuNDM1NTU1IDYuNjIxNDc5OCwtNS4xNTM0MzggMC44OTc4OSwtMC42OTg5MjIgMS44MDY0NywtMC43MDU3NjYgMi43MDU4OCwtMC4wMDUyIDIuMjA2NTgsMS43MTg0ODMgNC40MTEwOCwzLjQzOTUwNiA2LjYyMDgxLDUuMTUzODk3IDAuMjAxNTEsMC4xNTYzNSAwLjI4NjYsMC4zMzk2NTMgMC4yODYsMC41OTM4NjQgLTAuMDA1LDIuNzE2NTI0OCAtMC4wMDQsNS40MzMxOTA4IC0wLjAwNCw4LjE0OTgyMDggMCwwLjA5OTAzIC0wLjAwMiwwLjE5ODYxNCAwLjAwNSwwLjI5NzQyNyAwLjAzMzUsMC40MjIxNjggMC40NjA2MiwwLjczMzQ5NCAwLjg3MzA1LDAuNjM5OTM3IDAuNDIyNTIsLTAuMDk1ODkgMC41OTQ3OCwtMC40MTQ0MDcgMC41OTUwMywtMC44Mjc2NSAwLjAwMSwtMS4zNDc1NzMgMC4wMDEsLTIuNjk1MDc2IDAuMDAxLC00LjA0MjY0OSBoIDEuNGUtNCBsIC0xLjRlLTQsLTAuMDE5NTEgdiAtMC4xMDQxMDQgbCAtMS4xZS00LC0yLjQ5MzUzNCBWIDkuNTQ1ODAzMiBsIDEuNTM5OTQsMS4yMTc5Mjc4IGMgMC4yMTIzLDAuMTYxOTI1IDAuNDQ1OTgsMC4yOTI0MTcgMC43MjIwMywwLjIyODIxMiAwLjMwMDY0LC0wLjA2OTg5IDAuNDk0MzgsLTAuMjQyODE3IDAuNTY4ODksLTAuNTQ1OTIzIDAuMDc1NiwtMC4zMDc3MjcgLTAuMDE1LC0wLjU1OTc1MDggLTAuMjYyMTEsLTAuNzU2MjQ3OCAtMC4yNDIwMSwtMC4xOTIzNyAtMC42NjUwMiwtMC41MjcwMTQgLTEuMTI2ODEsLTAuODkxNjQ0IC0wLjAzNTQsLTAuMDM2NTUgLTAuMDczOSwtMC4wNzEyNiAtMC4xMTUsLTAuMTAzNjQ2IC0wLjM1Mzg0LC0wLjI3ODcyOSAtMC43MDU0NSwtMC41NjAzMTYgLTEuMDY3NjEsLTAuODI4MjUgbCAtMC4wNDQ0LC0wLjAzNDkzIGMgLTAuMTU1NjgsLTAuMTMxODY4IC0wLjIxOTY0LC0wLjI5MzMzNCAtMC4yMTgyMywtMC41MDQ2MTMgMC4wMDYsLTAuOTU2NDEzIDAuMDA0LC0xLjkxMjc5MiAwLjAwMiwtMi44NjkxNzEgLTEuMWUtNCwtMC4wODQ3NCAzLjVlLTQsLTAuMTcxMTMyIC0wLjAxMjQsLTAuMjU1MjY5IC0wLjA1NjMsLTAuMzY3MTcxIC0wLjM2OTk2LC0wLjY2Njk5NiAtMC43NTA5MiwtMC42NDg0NCAtMC40MDczNSwwLjAxOTg2IC0wLjY5OTg4LDAuMzI2Nzc4IC0wLjcwNzQyLDAuNzMzMjgzIC0wLjAwOSwwLjQ5MzQ2NCAtMC4wMDIsMC45ODcwMzUgLTAuMDA0LDEuNDgwNDk5IC0yLjVlLTQsMC4wODQyOCAtMC4wMTE1LDAuMTY3Mjg3IC0wLjAxOCwwLjI1MDk2NiBsIC0wLjAzMjQsMC40MTY3MzUgLTAuMzQwMTEsLTAuMjQzMDYzIGMgLTAuMDc3MSwtMC4wNTUwMyAtMC4xNTYwMywtMC4xMDc0OTEgLTAuMjMwNzgsLTAuMTY1NzcgLTEuNzkwNTYsLTEuMzk1NDEgLTMuNTgxMjIsLTIuNzkwNzE0IC01LjM3MDk3LC00LjE4NzA0MSAtMS40MjAyNCwtMS4xMDgxMDggLTMuMDk5NzEsLTEuMTExMTQyIC00LjUyMDIsLTAuMDAxOCAtMi4zMzg0NDk4LDEuODI2NDMyIC00LjY4MDI1OTgsMy42NDg2NjcgLTcuMDIwNjg5OCw1LjQ3MjY2NiAtMC42MTk3NSwwLjQ4Mjg4MSAtMi40MDM1NywxLjg5MDQ5NyAtMy4wMTg1Njk5OSwyLjM3OTQ0NiAtMC4yNDcxNSwwLjE5NjQ5NyAtMC4zMzc3MSwwLjQ0ODUyMDggLTAuMjYyMTEsMC43NTYyNDc4IDAuMDc0NSwwLjMwMzEwNiAwLjI2ODI1LDAuNDc2MDM3IDAuNTY4ODg5OTksMC41NDU5MjMgMC4yNzYwNCwwLjA2NDIxIDAuNTA5NzIsLTAuMDY2MjkgMC43MjIwMywtMC4yMjgyMTIgbCAxLjUzOTk0LC0xLjIxNzkyNzggdiAwLjgwMjQ5NzggYyAwLDMuODUyMTQ5IC0wLjAwMiw3LjcwNDI5OCAwLjAwMSwxMS41NTYzNDIgMTBlLTQsMS41MjI5NzQgMC44NDkxMywyLjc5MjQ0MiAyLjI4MjA0LDMuMzI5MTkyIDAuMjYyMDEsMC4wOTgxMSAwLjUzOTY4LDAuMTQ3ODg1IDAuODA5OTEsMC4yMTgwMTcgeiBtIDQuMzE2ODI5OCwtMS40OTIgdiAtMi45NTM1NTYgaCA0LjYzODQ5IHYgMi45NTM1NTYgeiIKICAgICAgIHN0eWxlPSJmaWxsOiMxYjE5MTg7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlLXdpZHRoOjAuMzUyNzc3IgogICAgICAgaWQ9InBhdGg2NiIgLz4KICA8L2c+Cjwvc3ZnPgo=';
 
 
 /**
@@ -97,7 +112,7 @@ const PinsMap = {
     Button3: Pins.D10,
     Button4: Pins.D11,
     Button5: Pins.D12,
-    ExtSensor1: Pins.D13,
+    LEDStrip: Pins.D13,
     TempSensor: Pins.A0,
     ExtSensor2: Pins.A1,
     Slider: Pins.A2,
@@ -113,6 +128,8 @@ const IN_SOUND_SENSOR_MIN = 200;
 const IN_SENSOR_MAX = 1023;
 const OUT_SENSOR_MIN = 0;
 const OUT_SENSOR_MAX = 100;
+const LED_STRIP_LENGTH = 8;
+const LED_STRIP_BLACK_COLOR = '#000';
 // const TEMP_VOLTS_PER_DEGREE = 0.02; // 0.02 for TMP37, 0.01 for TMP35/36
 // const TEMP_OUTPUT_VOLTAGE = 0.25; // 0.25 for TMP35, 0.75 for TMP36, 0.5 for TMP37
 // const TEMP_OFFSET_VALUE = TEMP_OUTPUT_VOLTAGE - (25 * TEMP_VOLTS_PER_DEGREE); // calculating the offset for 0 °C
@@ -340,6 +357,38 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
             {
                 text: '7',
                 value: 7
+            },
+            {
+                text: '8',
+                value: 8
+            },
+            {
+                text: '9',
+                value: 9
+            },
+            {
+                text: '10',
+                value: 10
+            },
+            {
+                text: '11',
+                value: 11
+            },
+            {
+                text: '12',
+                value: 12
+            },
+            {
+                text: '13',
+                value: 13
+            },
+            {
+                text: '14',
+                value: 14
+            },
+            {
+                text: '15',
+                value: 15
             }
         ];
     }
@@ -459,6 +508,10 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     get INDICATOR_VALUES_MENU () {
         return [
             {
+                text: '',
+                value: ''
+            },
+            {
                 text: '0',
                 value: '0'
             },
@@ -557,7 +610,6 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
 
         // Create a new Arduino Nano peripheral instance
         this._peripheral = new RoboProStation(this.runtime, this.DEVICE_ID, originalDeviceId);
-        this._ledState = [0, 0, 0, 0, 0, 0, 0, 0];
         this._peripheral.on('connected', this._init);
     }
 
@@ -574,6 +626,12 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
             dio: PinsMap.DataLED,
             board: this._peripheral._firmata
         });
+        this.strip = new pixel.Strip({
+            data: PinsMap.LEDStrip,
+            length: LED_STRIP_LENGTH,
+            firmata: this._peripheral._firmata,
+            skip_firmware_check: true
+        });
     }
 
     /**
@@ -588,17 +646,19 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                     default: 'Robo Station',
                     description: 'The name of the arduino uno device pin category'
                 }),
+                blockIconURI: blockIconURI,
+                menuIconURI: menuIconURI,
                 color1: '#989898',
                 color2: '#989898',
                 color3: '#000000',
 
                 blocks: [
                     {
-                        opcode: 'ledTurnOn',
+                        opcode: 'ledPixelTurn',
                         text: formatMessage({
-                            id: 'roboPro.station.ledTurnOn',
-                            default: 'turn LED [LED_INDEX] on',
-                            description: 'Turn LED on'
+                            id: 'roboPro.station.ledPixelTurn',
+                            default: 'turn LED [LED_INDEX] [COLOR] [VALUE]',
+                            description: 'Turn LED'
                         }),
                         blockType: BlockType.COMMAND,
                         arguments: {
@@ -606,30 +666,43 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                                 type: ArgumentType.NUMBER,
                                 menu: 'leds',
                                 defaultValue: 0
+                            },
+                            COLOR: {
+                                type: ArgumentType.COLOR,
+                                defaultValue: '#f00'
+                            },
+                            VALUE: {
+                                type: ArgumentType.STRING,
+                                menu: 'onOff',
+                                defaultValue: 'on'
                             }
                         }
                     },
                     {
-                        opcode: 'ledTurnOff',
+                        opcode: 'ledTurn',
                         text: formatMessage({
-                            id: 'roboPro.station.ledTurnOff',
-                            default: 'turn LED [LED_INDEX] off',
-                            description: 'Turn LED off'
+                            id: 'roboPro.station.ledTurn',
+                            default: 'turn LED [COLOR] [VALUE]',
+                            description: 'Turn LED'
                         }),
                         blockType: BlockType.COMMAND,
                         arguments: {
-                            LED_INDEX: {
-                                type: ArgumentType.NUMBER,
-                                menu: 'leds',
-                                defaultValue: 0
+                            COLOR: {
+                                type: ArgumentType.COLOR,
+                                defaultValue: '#f00'
+                            },
+                            VALUE: {
+                                type: ArgumentType.STRING,
+                                menu: 'onOff',
+                                defaultValue: 'on'
                             }
                         }
                     },
                     {
-                        opcode: 'colorLedTurnOn',
+                        opcode: 'colorLedTurn',
                         text: formatMessage({
-                            id: 'roboPro.station.colorLedTurnOn',
-                            default: 'turn LED [LED_PIN] on',
+                            id: 'roboPro.station.colorLedTurn',
+                            default: 'turn LED [LED_PIN] [VALUE]',
                             description: 'Turn LED on'
                         }),
                         blockType: BlockType.COMMAND,
@@ -638,22 +711,11 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                                 type: ArgumentType.STRING,
                                 menu: 'colorLeds',
                                 defaultValue: PinsMap.RedLED
-                            }
-                        }
-                    },
-                    {
-                        opcode: 'colorLedTurnOff',
-                        text: formatMessage({
-                            id: 'roboPro.station.colorLedTurnOff',
-                            default: 'turn LED [LED_PIN] off',
-                            description: 'Turn LED on'
-                        }),
-                        blockType: BlockType.COMMAND,
-                        arguments: {
-                            LED_PIN: {
+                            },
+                            VALUE: {
                                 type: ArgumentType.STRING,
-                                menu: 'colorLeds',
-                                defaultValue: PinsMap.RedLED
+                                menu: 'onOff',
+                                defaultValue: 'on'
                             }
                         }
                     },
@@ -837,7 +899,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                     {
                         opcode: 'turnIndicator',
                         text: formatMessage({
-                            id: 'roboPro.station.turnIndicatorOn',
+                            id: 'roboPro.station.turnIndicator',
                             default: 'turn indicator [VALUE]',
                             description: 'roboProStation turn indicator'
                         }),
@@ -883,6 +945,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         items: this.DIGITAL_OUTPUT_PINS_MENU
                     },
                     leds: {
+                        acceptReporters: true,
                         items: this.LEDS_MENU
                     },
                     level: {
@@ -899,9 +962,11 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         items: this.INDICATOR_BRIGHTNESS_MENU
                     },
                     indicatorDigits: {
+                        acceptReporters: true,
                         items: this.INDICATOR_DIGITS_MENU
                     },
                     indicatorValues: {
+                        acceptReporters: true,
                         items: this.INDICATOR_VALUES_MENU
                     },
                     onOff: {
@@ -913,49 +978,61 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     }
 
     /**
-     * Turn on LED.
+     * Turn LED strip on/off.
      * @param {object} args - the block's arguments.
      * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
      */
-    ledTurnOn (args) {
+    ledTurn (args) {
+        let color = args.COLOR;
+        const value = args.VALUE;
+        if (Number.isInteger(color)) {
+            color = Color.decimalToHex(color);
+        }
+        if (value === 'off') {
+            this.strip.off();
+        } else {
+            this.strip.color(color);
+            this.strip.show();
+        }
+    }
+
+    /**
+     * Turn LED strip pixel on/off.
+     * @param {object} args - the block's arguments.
+     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
+     */
+    ledPixelTurn (args) {
         const ledIndex = args.LED_INDEX;
-        log.info(`[ledTurnOn] ledIndex: ${ledIndex}`);
-        this._ledState[ledIndex] = 1;
-        return this._updateShiftRegister();
+        let color = args.COLOR;
+        const value = args.VALUE;
+
+        if (Number.isInteger(color)) {
+            color = Color.decimalToHex(color);
+        }
+        if (value === 'off') {
+            color = LED_STRIP_BLACK_COLOR;
+        }
+        const stripPixel = this.strip.pixel(ledIndex);
+        if (stripPixel) {
+            stripPixel.color(color);
+        }
+        this.strip.show();
     }
 
     /**
-     * Turn off LED.
+     * Turn color LED on/off.
      * @param {object} args - the block's arguments.
      * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
      */
-    ledTurnOff (args) {
-        const ledIndex = args.LED_INDEX;
-        log.info(`[ledTurnOff] ledIndex: ${ledIndex}`);
-        this._ledState[ledIndex] = 0;
-        return this._updateShiftRegister();
-    }
-
-    /**
-     * Turn on color LED.
-     * @param {object} args - the block's arguments.
-     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
-     */
-    colorLedTurnOn (args) {
+    colorLedTurn (args) {
         const ledPin = args.LED_PIN;
-        log.info(`[colorLedTurnOn] ledPin: ${ledPin}`);
-        return this._peripheral.setDigitalOutput(ledPin, Level.High);
-    }
-
-    /**
-     * Turn off color LED.
-     * @param {object} args - the block's arguments.
-     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
-     */
-    colorLedTurnOff (args) {
-        const ledPin = args.LED_PIN;
-        log.info(`[colorLedTurnOff] ledPin: ${ledPin}`);
-        return this._peripheral.setDigitalOutput(ledPin, Level.Low);
+        const value = args.VALUE;
+        log.info(`[colorLedTurn] ledPin: ${ledPin}, value: ${value}`);
+        let level = Level.Low;
+        if (value === 'on') {
+            level = Level.High;
+        }
+        return this._peripheral.setDigitalOutput(ledPin, level);
     }
 
     setIndicatorBrightness (args) {
@@ -1065,37 +1142,6 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
             return stage.tempo;
         }
         return 60;
-    }
-
-    _updateShiftRegister () {
-        return Promise.all([
-            this._peripheral.setDigitalOutput(PinsMap.LatchLED, Level.Low),
-            this._peripheral.setDigitalOutput(PinsMap.DataLED, Level.Low),
-            this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low)
-        ])
-            .then(() => {
-                for (let i = 0; i < this._ledState.length; i++) {
-                    this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low)
-                        .then(() => {
-                            let pinState;
-                            if (this._ledState[i] > 0) {
-                                pinState = Level.High;
-                            } else {
-                                pinState = Level.Low;
-                            }
-                            return pinState;
-                        })
-                        .then(pinState => Promise.all([
-                            this._peripheral.setDigitalOutput(PinsMap.DataLED, pinState),
-                            this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.High),
-                            this._peripheral.setDigitalOutput(PinsMap.DataLED, Level.Low)
-                        ]));
-                }
-            })
-            .then(() => Promise.all([
-                this._peripheral.setDigitalOutput(PinsMap.ClkLED, Level.Low),
-                this._peripheral.setDigitalOutput(PinsMap.LatchLED, Level.High)
-            ]));
     }
 
     /**

@@ -53,7 +53,7 @@ const Firmata = {
             // figure out where we are writing to
             const port = firmata.transport || firmata.sp || firmata;
 
-            if (port.write === undefined) {
+            if (port.transportWrite === undefined) {
                 const err = new Error('Node Pixel FIRMATA controller requires IO that can write out');
                 err.name = 'NoWritablePortError';
                 throw err;
@@ -129,7 +129,7 @@ const Firmata = {
             });
             data.push(END_SYSEX);
 
-            port.write(Buffer.from(data), function (error, res) {
+            port.transportWrite(Buffer.from(data), function (error, res) {
                 let err = null;
                 if (error) {
                     err = error;
@@ -157,7 +157,7 @@ const Firmata = {
             data[3] = END_SYSEX;
 
             // now just write that to the port and it should show the frame.
-            strip.port.write(Buffer.from(data));
+            strip.port.transportWrite(Buffer.from(data));
         }
     },
     strip_color: {
@@ -176,7 +176,7 @@ const Firmata = {
             data[6] = (color >> 21) & FIRMATA_7BIT_MASK;
             data[7] = END_SYSEX;
 
-            strip.port.write(Buffer.from(data));
+            strip.port.transportWrite(Buffer.from(data));
         }
     },
     _shift: {
@@ -192,7 +192,7 @@ const Firmata = {
             data[3] = (amt | direction | wrap_val) & FIRMATA_7BIT_MASK;
             data[4] = END_SYSEX;
 
-            strip.port.write(Buffer.from(data));
+            strip.port.transportWrite(Buffer.from(data));
         }
     }
 }

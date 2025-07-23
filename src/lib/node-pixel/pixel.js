@@ -79,7 +79,7 @@ const Pixel_Controllers = {
                 data.push((color >> 21) & FIRMATA_7BIT_MASK);
                 data.push(END_SYSEX);
 
-                pixel.port.write(Buffer.from(data));
+                pixel.port.transportWrite(Buffer.from(data));
             }
         }
     },
