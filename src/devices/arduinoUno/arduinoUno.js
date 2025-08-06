@@ -63,7 +63,6 @@ const Pins = {
     A5: 'A5'
 };
 
-
 const Level = {
     High: 'HIGH',
     Low: 'LOW'

@@ -9,6 +9,7 @@
 const ArduinoPeripheral = require('../common/arduino-peripheral');
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
+const ProgramModeType = require('../../extension-support/program-mode-type');
 const Cast = require('../../util/cast');
 const MathUtil = require('../../util/math-util');
 const OpenBlockArduinoUnoDevice = require('../arduinoUno/arduinoUno');
@@ -30,7 +31,6 @@ const blockIconURI = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNv
  */
 // eslint-disable-next-line max-len
 const menuIconURI = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB3aWR0aD0iMjdtbSIKICAgaGVpZ2h0PSIyN21tIgogICB2aWV3Qm94PSIwIDAgMjcgMjciCiAgIHZlcnNpb249IjEuMSIKICAgaWQ9InN2ZzMzOCIKICAgaW5rc2NhcGU6dmVyc2lvbj0iMS4yLjIgKGIwYTg0ODY1NDEsIDIwMjItMTItMDEpIgogICB4bWxuczppbmtzY2FwZT0iaHR0cDovL3d3dy5pbmtzY2FwZS5vcmcvbmFtZXNwYWNlcy9pbmtzY2FwZSIKICAgeG1sbnM6c29kaXBvZGk9Imh0dHA6Ly9zb2RpcG9kaS5zb3VyY2Vmb3JnZS5uZXQvRFREL3NvZGlwb2RpLTAuZHRkIgogICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDxzb2RpcG9kaTpuYW1lZHZpZXcKICAgICBpZD0ibmFtZWR2aWV3MzQwIgogICAgIHBhZ2Vjb2xvcj0iI2ZmZmZmZiIKICAgICBib3JkZXJjb2xvcj0iIzY2NjY2NiIKICAgICBib3JkZXJvcGFjaXR5PSIxLjAiCiAgICAgaW5rc2NhcGU6c2hvd3BhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6cGFnZW9wYWNpdHk9IjAuMCIKICAgICBpbmtzY2FwZTpwYWdlY2hlY2tlcmJvYXJkPSIwIgogICAgIGlua3NjYXBlOmRlc2tjb2xvcj0iI2QxZDFkMSIKICAgICBpbmtzY2FwZTpkb2N1bWVudC11bml0cz0ibW0iCiAgICAgc2hvd2dyaWQ9ImZhbHNlIgogICAgIGlua3NjYXBlOnpvb209IjMuMTk5OTQzOSIKICAgICBpbmtzY2FwZTpjeD0iMjE1Ljk0MTI5IgogICAgIGlua3NjYXBlOmN5PSIxMzguOTA4NjkiCiAgICAgaW5rc2NhcGU6d2luZG93LXdpZHRoPSIxOTIwIgogICAgIGlua3NjYXBlOndpbmRvdy1oZWlnaHQ9IjEyMzYiCiAgICAgaW5rc2NhcGU6d2luZG93LXg9IjI1NjAiCiAgICAgaW5rc2NhcGU6d2luZG93LXk9IjAiCiAgICAgaW5rc2NhcGU6d2luZG93LW1heGltaXplZD0iMCIKICAgICBpbmtzY2FwZTpjdXJyZW50LWxheWVyPSJsYXllcjEiIC8+CiAgPGRlZnMKICAgICBpZD0iZGVmczMzNSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMYXllciAxIgogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaWQ9ImxheWVyMSI+CiAgICA8cGF0aAogICAgICAgZD0iTSA2LjU5MzA0NzIsMjUuNDUxODMzIEggMTkuODYzODE3IGMgMC4wNTk5LC0wLjAxNzMyIDAuMTE4NSwtMC4wMzYxMiAwLjE4MDQ4LC0wLjA0NTUxIDEuNjI4MTgsLTAuMjQ3MzY3IDIuOTE0ODIsLTEuNzMwNDQyIDIuOTEyMzksLTMuMzc5NDYzIC03LjFlLTQsLTAuNDUxNTU1IC0wLjMyODQsLTAuNzk2OTIzIC0wLjc4NzI5LC0wLjc3NzE2OCAtMC40MDk0LDAuMDE3NjQgLTAuNjYwNTEsMC4zNDY5NTYgLTAuNjg1NTUsMC43MzczNCAtMC4wNzg3LDEuMjIwMzYxIC0wLjg5NzU0LDEuOTg4MDA0IC0yLjEyMDEyLDEuOTg5ODc0IC0wLjYwMDI1LDAuMDAxMSAtMS4yMDA1LDIuMTJlLTQgLTEuODAwNzUsMi4xMmUtNCBoIC0wLjUyOTI0IHYgLTAuNTM2NTA0IGMgMCwtMS4wMjk4OTcgMC4wMDEsLTIuMDU5NzU5IC0zLjVlLTQsLTMuMDg5NzYzIC03LjFlLTQsLTAuNTMwNDcgLTAuMjc5MTYsLTAuODMyNjI0IC0wLjgxNTk0LC0wLjgzMzQzNSAtMS45OTQ3MSwtMC4wMDI4IC0zLjk4OTU5LC0wLjAwMzIgLTUuOTg0MzQsMi4xMWUtNCAtMC41MTk2Njk4LDAuMDAxMSAtMC44MDY4Njk4LDAuMzAwNDI1IC0wLjgwNzc3OTgsMC44MTY5OTcgLTAuMDAyLDEuMDQ1OTg0IC03LjFlLTQsMi4wOTIwMDMgLTcuMWUtNCwzLjEzODAyMiB2IDAuNTA0NDcyIGggLTAuMjM1ODcgYyAtMC42OTI0MywwIC0xLjM4NDg2LDMuNTJlLTQgLTIuMDc3MjksLTIuMTJlLTQgLTEuMjkzMjQsLTAuMDAxMSAtMi4xMzU5OSwtMC44Mzk3NTEgLTIuMTM2MzUsLTIuMTM0MTYgLTAuMDAxLC00LjM3MTA0OSA3LjFlLTQsLTguNzQyMjA0IC0wLjAwNCwtMTMuMTEzMjE3OCAtMy42ZS00LC0wLjI0NTUzMyAwLjA4OTIsLTAuNDIwMjI4IDAuMjgyNDMsLTAuNTcwMDg4IDIuMjA5NDgsLTEuNzE0ODg1IDQuNDE0MzMsLTMuNDM1NTU1IDYuNjIxNDc5OCwtNS4xNTM0MzggMC44OTc4OSwtMC42OTg5MjIgMS44MDY0NywtMC43MDU3NjYgMi43MDU4OCwtMC4wMDUyIDIuMjA2NTgsMS43MTg0ODMgNC40MTEwOCwzLjQzOTUwNiA2LjYyMDgxLDUuMTUzODk3IDAuMjAxNTEsMC4xNTYzNSAwLjI4NjYsMC4zMzk2NTMgMC4yODYsMC41OTM4NjQgLTAuMDA1LDIuNzE2NTI0OCAtMC4wMDQsNS40MzMxOTA4IC0wLjAwNCw4LjE0OTgyMDggMCwwLjA5OTAzIC0wLjAwMiwwLjE5ODYxNCAwLjAwNSwwLjI5NzQyNyAwLjAzMzUsMC40MjIxNjggMC40NjA2MiwwLjczMzQ5NCAwLjg3MzA1LDAuNjM5OTM3IDAuNDIyNTIsLTAuMDk1ODkgMC41OTQ3OCwtMC40MTQ0MDcgMC41OTUwMywtMC44Mjc2NSAwLjAwMSwtMS4zNDc1NzMgMC4wMDEsLTIuNjk1MDc2IDAuMDAxLC00LjA0MjY0OSBoIDEuNGUtNCBsIC0xLjRlLTQsLTAuMDE5NTEgdiAtMC4xMDQxMDQgbCAtMS4xZS00LC0yLjQ5MzUzNCBWIDkuNTQ1ODAzMiBsIDEuNTM5OTQsMS4yMTc5Mjc4IGMgMC4yMTIzLDAuMTYxOTI1IDAuNDQ1OTgsMC4yOTI0MTcgMC43MjIwMywwLjIyODIxMiAwLjMwMDY0LC0wLjA2OTg5IDAuNDk0MzgsLTAuMjQyODE3IDAuNTY4ODksLTAuNTQ1OTIzIDAuMDc1NiwtMC4zMDc3MjcgLTAuMDE1LC0wLjU1OTc1MDggLTAuMjYyMTEsLTAuNzU2MjQ3OCAtMC4yNDIwMSwtMC4xOTIzNyAtMC42NjUwMiwtMC41MjcwMTQgLTEuMTI2ODEsLTAuODkxNjQ0IC0wLjAzNTQsLTAuMDM2NTUgLTAuMDczOSwtMC4wNzEyNiAtMC4xMTUsLTAuMTAzNjQ2IC0wLjM1Mzg0LC0wLjI3ODcyOSAtMC43MDU0NSwtMC41NjAzMTYgLTEuMDY3NjEsLTAuODI4MjUgbCAtMC4wNDQ0LC0wLjAzNDkzIGMgLTAuMTU1NjgsLTAuMTMxODY4IC0wLjIxOTY0LC0wLjI5MzMzNCAtMC4yMTgyMywtMC41MDQ2MTMgMC4wMDYsLTAuOTU2NDEzIDAuMDA0LC0xLjkxMjc5MiAwLjAwMiwtMi44NjkxNzEgLTEuMWUtNCwtMC4wODQ3NCAzLjVlLTQsLTAuMTcxMTMyIC0wLjAxMjQsLTAuMjU1MjY5IC0wLjA1NjMsLTAuMzY3MTcxIC0wLjM2OTk2LC0wLjY2Njk5NiAtMC43NTA5MiwtMC42NDg0NCAtMC40MDczNSwwLjAxOTg2IC0wLjY5OTg4LDAuMzI2Nzc4IC0wLjcwNzQyLDAuNzMzMjgzIC0wLjAwOSwwLjQ5MzQ2NCAtMC4wMDIsMC45ODcwMzUgLTAuMDA0LDEuNDgwNDk5IC0yLjVlLTQsMC4wODQyOCAtMC4wMTE1LDAuMTY3Mjg3IC0wLjAxOCwwLjI1MDk2NiBsIC0wLjAzMjQsMC40MTY3MzUgLTAuMzQwMTEsLTAuMjQzMDYzIGMgLTAuMDc3MSwtMC4wNTUwMyAtMC4xNTYwMywtMC4xMDc0OTEgLTAuMjMwNzgsLTAuMTY1NzcgLTEuNzkwNTYsLTEuMzk1NDEgLTMuNTgxMjIsLTIuNzkwNzE0IC01LjM3MDk3LC00LjE4NzA0MSAtMS40MjAyNCwtMS4xMDgxMDggLTMuMDk5NzEsLTEuMTExMTQyIC00LjUyMDIsLTAuMDAxOCAtMi4zMzg0NDk4LDEuODI2NDMyIC00LjY4MDI1OTgsMy42NDg2NjcgLTcuMDIwNjg5OCw1LjQ3MjY2NiAtMC42MTk3NSwwLjQ4Mjg4MSAtMi40MDM1NywxLjg5MDQ5NyAtMy4wMTg1Njk5OSwyLjM3OTQ0NiAtMC4yNDcxNSwwLjE5NjQ5NyAtMC4zMzc3MSwwLjQ0ODUyMDggLTAuMjYyMTEsMC43NTYyNDc4IDAuMDc0NSwwLjMwMzEwNiAwLjI2ODI1LDAuNDc2MDM3IDAuNTY4ODg5OTksMC41NDU5MjMgMC4yNzYwNCwwLjA2NDIxIDAuNTA5NzIsLTAuMDY2MjkgMC43MjIwMywtMC4yMjgyMTIgbCAxLjUzOTk0LC0xLjIxNzkyNzggdiAwLjgwMjQ5NzggYyAwLDMuODUyMTQ5IC0wLjAwMiw3LjcwNDI5OCAwLjAwMSwxMS41NTYzNDIgMTBlLTQsMS41MjI5NzQgMC44NDkxMywyLjc5MjQ0MiAyLjI4MjA0LDMuMzI5MTkyIDAuMjYyMDEsMC4wOTgxMSAwLjUzOTY4LDAuMTQ3ODg1IDAuODA5OTEsMC4yMTgwMTcgeiBtIDQuMzE2ODI5OCwtMS40OTIgdiAtMi45NTM1NTYgaCA0LjYzODQ5IHYgMi45NTM1NTYgeiIKICAgICAgIHN0eWxlPSJmaWxsOiMxYjE5MTg7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlLXdpZHRoOjAuMzUyNzc3IgogICAgICAgaWQ9InBhdGg2NiIgLz4KICA8L2c+Cjwvc3ZnPgo=';
-
 
 /**
  * The list of USB device filters.
@@ -89,6 +89,21 @@ const Pins = {
 const Level = {
     High: 'HIGH',
     Low: 'LOW'
+};
+
+const Buadrate = {
+    B4800: '4800',
+    B9600: '9600',
+    B19200: '19200',
+    B38400: '38400',
+    B57600: '57600',
+    B76800: '76800',
+    B115200: '115200'
+};
+
+const Eol = {
+    Warp: 'warp',
+    NoWarp: 'noWarp'
 };
 
 const Mode = {
@@ -973,7 +988,89 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         items: this.ON_OFF_MENU
                     }
                 }
-            }
+            },
+            {
+                id: 'serial',
+                name: formatMessage({
+                    id: 'arduinoUno.category.serial',
+                    default: 'Serial',
+                    description: 'The name of the arduino uno device serial category'
+                }),
+                color1: '#9966FF',
+                color2: '#774DCB',
+                color3: '#774DCB',
+
+                blocks: [
+                    {
+                        opcode: 'serialBegin',
+                        text: formatMessage({
+                            id: 'arduinoUno.serial.serialBegin',
+                            default: 'serial begin baudrate [VALUE]',
+                            description: 'arduinoUno serial begin'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            VALUE: {
+                                type: ArgumentType.STRING,
+                                menu: 'baudrate',
+                                defaultValue: Buadrate.B9600
+                            }
+                        },
+                        programMode: [ProgramModeType.UPLOAD]
+                    },
+                    {
+                        opcode: 'serialPrint',
+                        text: formatMessage({
+                            id: 'arduinoUno.serial.serialPrint',
+                            default: 'serial print [VALUE] [EOL]',
+                            description: 'arduinoUno serial print'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            VALUE: {
+                                type: ArgumentType.STRING,
+                                defaultValue: 'Hello OpenBlock'
+                            },
+                            EOL: {
+                                type: ArgumentType.STRING,
+                                menu: 'eol',
+                                defaultValue: Eol.Warp
+                            }
+                        },
+                        programMode: [ProgramModeType.UPLOAD]
+                    },
+                    {
+                        opcode: 'serialAvailable',
+                        text: formatMessage({
+                            id: 'arduinoUno.serial.serialAvailable',
+                            default: 'serial available data length',
+                            description: 'arduinoUno serial available data length'
+                        }),
+                        blockType: BlockType.REPORTER,
+                        disableMonitor: true,
+                        programMode: [ProgramModeType.UPLOAD]
+                    },
+                    {
+                        opcode: 'serialReadAByte',
+                        text: formatMessage({
+                            id: 'arduinoUno.serial.serialReadAByte',
+                            default: 'serial read a byte',
+                            description: 'arduinoUno serial read a byte'
+                        }),
+                        blockType: BlockType.REPORTER,
+                        disableMonitor: true,
+                        programMode: [ProgramModeType.UPLOAD]
+                    }
+                ],
+                menus: {
+                    baudrate: {
+                        items: this.BAUDTATE_MENU
+                    },
+                    eol: {
+                        items: this.EOL_MENU
+                    }
+                }
+            },
         ];
     }
 
