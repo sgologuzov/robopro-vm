@@ -125,8 +125,8 @@ const PinsMap = {
     Button1: Pins.D8,
     Button2: Pins.D9,
     Button3: Pins.D10,
-    Button4: Pins.D11,
-    Button5: Pins.D12,
+    Button4: Pins.D12,
+    Button5: Pins.D11,
     LEDStrip: Pins.D13,
     TempSensor: Pins.A0,
     ExtSensor2: Pins.A1,
@@ -1216,8 +1216,16 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      * @param {object} args - the block's arguments.
      * @return {Promise} - true if read high level, false if read low level.
      */
-    readButton (args) {
-        return this._peripheral.readDigitalPin(args.PIN);
+    readButton(args) {
+        return this._peripheral.readDigitalPin(args.PIN)
+            .then(value => {
+                if (value == 0) {
+                    value = 1;
+                } else {
+                    value = 0;
+                }
+                return value;
+            })
     }
 
     /**
