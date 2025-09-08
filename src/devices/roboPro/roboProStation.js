@@ -1082,14 +1082,16 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     ledTurn (args) {
         let color = args.COLOR;
         const value = args.VALUE;
-        if (Number.isInteger(color)) {
-            color = Color.decimalToHex(color);
-        }
-        if (value === 'off') {
-            this.strip.off();
-        } else {
-            this.strip.color(color);
-            this.strip.show();
+        if (this.strip) {
+            if (Number.isInteger(color)) {
+                color = Color.decimalToHex(color);
+            }
+            if (value === 'off') {
+                this.strip.off();
+            } else {
+                this.strip.color(color);
+                this.strip.show();
+            }
         }
     }
 
@@ -1102,18 +1104,19 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
         const ledIndex = args.LED_INDEX;
         let color = args.COLOR;
         const value = args.VALUE;
-
-        if (Number.isInteger(color)) {
-            color = Color.decimalToHex(color);
+        if (this.strip) {
+            if (Number.isInteger(color)) {
+                color = Color.decimalToHex(color);
+            }
+            if (value === 'off') {
+                color = LED_STRIP_BLACK_COLOR;
+            }
+            const stripPixel = this.strip.pixel(ledIndex);
+            if (stripPixel) {
+                stripPixel.color(color);
+            }
+            this.strip.show();
         }
-        if (value === 'off') {
-            color = LED_STRIP_BLACK_COLOR;
-        }
-        const stripPixel = this.strip.pixel(ledIndex);
-        if (stripPixel) {
-            stripPixel.color(color);
-        }
-        this.strip.show();
     }
 
     /**
@@ -1134,35 +1137,45 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
 
     setIndicatorBrightness (args) {
         const value = args.VALUE;
-        this.display.setBrightness(value);
+        if (this.display) {
+            this.display.setBrightness(value);
+        }
     }
 
     setIndicatorDigitValue (args) {
         const digit = args.DIGIT;
         const value = args.VALUE;
-        this.display.setDigit(digit, value);
+        if (this.display) {
+            this.display.setDigit(digit, value);
+        }
     }
 
     setIndicatorValue (args) {
         const value = args.VALUE;
-        this.display.show(value);
+        if (this.display) {
+            this.display.show(value);
+        }
     }
 
     turnIndicatorSeparator (args) {
         const value = args.VALUE;
-        if (value === 'on') {
-            this.display.separatorOn();
-        } else {
-            this.display.separatorOff();
+        if (this.display) {
+            if (value === 'on') {
+                this.display.separatorOn();
+            } else {
+                this.display.separatorOff();
+            }
         }
     }
 
     turnIndicator (args) {
         const value = args.VALUE;
-        if (value === 'on') {
-            this.display.on();
-        } else {
-            this.display.off();
+        if (this.display) {
+            if (value === 'on') {
+                this.display.on();
+            } else {
+                this.display.off();
+            }
         }
     }
 
