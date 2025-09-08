@@ -45,7 +45,7 @@
     "loadjs": "^4.2.0",
     "minilog": "3.1.0",
     "node-fetch": "^2.6.1",
-    "robopro-l10n": "^3.15.5",
+    "robopro-l10n": "^3.15.7",
     "scratch-parser": "5.0.0",
     "scratch-sb1-converter": "0.2.7",
     "scratch-translate-extension-languages": "0.0.20191118205314",
