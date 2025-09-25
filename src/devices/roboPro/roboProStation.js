@@ -129,11 +129,11 @@ const PinsMap = {
     Button5: Pins.D11,
     LEDStrip: Pins.D13,
     TempSensor: Pins.A0,
-    ExtSensor2: Pins.A1,
+    LightSensor: Pins.A1,
     Slider: Pins.A2,
     SoundSensor: Pins.A3,
-    LightSensor: Pins.A4,
-    LatchLED: Pins.A5
+    I2CSDA: Pins.A4,
+    I2CSCL: Pins.A5
 };
 
 const MonitoringPins = ['D8', 'D9', 'D10', 'D11', 'D12', 'A0', 'A2', 'A3', 'A4'];
@@ -143,7 +143,7 @@ const IN_SOUND_SENSOR_MIN = 200;
 const IN_SENSOR_MAX = 1023;
 const OUT_SENSOR_MIN = 0;
 const OUT_SENSOR_MAX = 100;
-const LED_STRIP_LENGTH = 8;
+const LED_STRIP_LENGTH = 16;
 const LED_STRIP_BLACK_COLOR = '#000';
 // const TEMP_VOLTS_PER_DEGREE = 0.02; // 0.02 for TMP37, 0.01 for TMP35/36
 // const TEMP_OUTPUT_VOLTAGE = 0.25; // 0.25 for TMP35, 0.75 for TMP36, 0.5 for TMP37
@@ -343,67 +343,67 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
         return [
             {
                 text: '0',
-                value: 0
+                value: '0'
             },
             {
                 text: '1',
-                value: 1
+                value: '1'
             },
             {
                 text: '2',
-                value: 2
+                value: '2'
             },
             {
                 text: '3',
-                value: 3
+                value: '3'
             },
             {
                 text: '4',
-                value: 4
+                value: '4'
             },
             {
                 text: '5',
-                value: 5
+                value: '5'
             },
             {
                 text: '6',
-                value: 6
+                value: '6'
             },
             {
                 text: '7',
-                value: 7
+                value: '7'
             },
             {
                 text: '8',
-                value: 8
+                value: '8'
             },
             {
                 text: '9',
-                value: 9
+                value: '9'
             },
             {
                 text: '10',
-                value: 10
+                value: '10'
             },
             {
                 text: '11',
-                value: 11
+                value: '11'
             },
             {
                 text: '12',
-                value: 12
+                value: '12'
             },
             {
                 text: '13',
-                value: 13
+                value: '13'
             },
             {
                 text: '14',
-                value: 14
+                value: '14'
             },
             {
                 text: '15',
-                value: 15
+                value: '15'
             }
         ];
     }
@@ -630,7 +630,6 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
 
     _init () {
         this._peripheral.setPinMode(PinsMap.TempSensor, Mode.OneWire);
-        this._peripheral.setPinMode(PinsMap.LatchLED, Mode.Output);
         this._peripheral.setPinMode(PinsMap.Button1, Mode.InputPullup);
         this._peripheral.setPinMode(PinsMap.Button2, Mode.InputPullup);
         this._peripheral.setPinMode(PinsMap.Button3, Mode.InputPullup);
@@ -678,9 +677,9 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         blockType: BlockType.COMMAND,
                         arguments: {
                             LED_INDEX: {
-                                type: ArgumentType.NUMBER,
+                                type: ArgumentType.UINT8_NUMBER,
                                 menu: 'leds',
-                                defaultValue: 0
+                                defaultValue: '0'
                             },
                             COLOR: {
                                 type: ArgumentType.COLOR,
@@ -870,7 +869,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                             VALUE: {
                                 type: ArgumentType.UINT8_NUMBER,
                                 menu: 'indicatorBrightness',
-                                defaultValue: 3
+                                defaultValue: '3'
                             }
                         }
                     },
@@ -886,7 +885,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                             DIGIT: {
                                 type: ArgumentType.UINT8_NUMBER,
                                 menu: 'indicatorDigits',
-                                defaultValue: 0
+                                defaultValue: '0'
                             },
                             VALUE: {
                                 type: ArgumentType.STRING,
