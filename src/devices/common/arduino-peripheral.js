@@ -1,5 +1,6 @@
 const formatMessage = require('format-message');
 const Buffer = require('buffer').Buffer;
+const Color = require('../../util/color');
 
 const Serialport = require('../../io/serialport');
 const Base64Util = require('../../util/base64-util');
@@ -7,6 +8,14 @@ const Base64Util = require('../../util/base64-util');
 const Emitter = require('events');
 const Firmata = require('../../lib/firmata/firmata');
 const {Map} = require('immutable');
+const pixel = require('../../lib/node-pixel');
+const tm1637 = require('../../lib/TM1637Display');
+const VL53L0X = require('../../lib/VL53L0X');
+
+const LED_STRIP_LENGTH = 16;
+const LED_STRIP_BLACK_COLOR = '#000';
+
+const VL53L0X_ADRESS = '0x29';
 
 /**
  * A string to report connect firmata timeout.
@@ -116,7 +125,7 @@ class ArduinoPeripheral extends Emitter {
         this.reset = this.reset.bind(this);
         this._onConnect = this._onConnect.bind(this);
         this._onMessage = this._onMessage.bind(this);
-        this._onPinMonitoring = this._onPinMonitoring.bind(this);
+        this._onPinMonitoring = this._throttle(this._onPinMonitoring.bind(this), 250);
 
         /**
          * Firmata connection.
@@ -163,6 +172,30 @@ class ArduinoPeripheral extends Emitter {
          * @private
          */
         this._oneWireDevices = Map();
+    }
+
+    initDistanceSensor (address) {
+        this.distanceSensor = VL53L0X({
+            board: this._firmata,
+            address: Number(address)
+        });
+    }
+
+    initDisplay (clkLed, dataLed) {
+        this.display = tm1637({
+            clk: clkLed,
+            dio: dataLed,
+            board: this._firmata
+        });
+    }
+
+    initLedStrip (pin) {
+        this.strip = new pixel.Strip({
+            data: pin,
+            length: LED_STRIP_LENGTH,
+            firmata: this._firmata,
+            skip_firmware_check: true
+        });
     }
 
     /**
@@ -622,8 +655,8 @@ class ArduinoPeripheral extends Emitter {
     readDS18B20 (pin, deviceIndex) {
         if (this.isReady()) {
             pin = this.parsePin(pin);
-            let devices = this._oneWireDevices.get(pin).filter(item => item[0] === 0x28);
-            let device = devices[deviceIndex];
+            const devices = this._oneWireDevices.get(pin).filter(item => item[0] === 0x28);
+            const device = devices[deviceIndex];
             // TODO: устройство не найдено
             this._firmata.sendOneWireReset(pin); // Reset
             this._firmata.sendOneWireWrite(pin, device, 0x44); // Select device, process temp
@@ -638,6 +671,19 @@ class ArduinoPeripheral extends Emitter {
 
                     const temp = ((data[1] << 8) | data[0]) / 16.0;
                     resolve(temp.toFixed(1));
+                });
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataReadTimeout);
+            });
+        }
+    }
+
+    readDistance (address) {
+        if (this.isReady()) {
+            return new Promise(resolve => {
+                this.distanceSensor.getDistance(Number(address), data => {
+                    resolve(data.distance);
                 });
                 window.setTimeout(() => {
                     resolve();
@@ -695,20 +741,142 @@ class ArduinoPeripheral extends Emitter {
         }
     }
 
+    setIndicatorBrightness (value) {
+        if (this.display && this.isReady()) {
+            return new Promise(resolve => {
+                this.display.setBrightness(value);
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataReadTimeout);
+            });
+        }
+    }
+
+    setIndicatorDigitValue (digit, value) {
+        if (this.display && this.isReady()) {
+            return new Promise(resolve => {
+                this.display.setDigit(digit, value);
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataReadTimeout);
+            });
+        }
+    }
+
+    setIndicatorValue (value) {
+        if (this.display && this.isReady()) {
+            return new Promise(resolve => {
+                this.display.show(value);
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataReadTimeout);
+            });
+        }
+    }
+
+    turnIndicatorSeparator (value) {
+        if (this.display && this.isReady()) {
+            return new Promise(resolve => {
+                if (value === 'on') {
+                    this.display.separatorOn();
+                } else {
+                    this.display.separatorOff();
+                }
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataReadTimeout);
+            });
+        }
+    }
+
+    turnIndicator (value) {
+        if (this.display && this.isReady()) {
+            return new Promise(resolve => {
+                if (value === 'on') {
+                    this.display.on();
+                } else {
+                    this.display.off();
+                }
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataReadTimeout);
+            });
+        }
+    }
+
+    ledStripTurn (color, value) {
+        if (this.strip && this.isReady()) {
+            return new Promise(resolve => {
+                if (Number.isInteger(color)) {
+                    color = Color.decimalToHex(color);
+                }
+                if (value === 'off') {
+                    this.strip.off();
+                } else {
+                    this.strip.color(color);
+                    this.strip.show();
+                }
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataReadTimeout);
+            });
+        }
+    }
+
+    ledStripPixelTurn (ledIndex, color, value) {
+        if (this.strip && this.isReady()) {
+            return new Promise(resolve => {
+                if (Number.isInteger(color)) {
+                    color = Color.decimalToHex(color);
+                }
+                if (value === 'off') {
+                    color = LED_STRIP_BLACK_COLOR;
+                }
+                const stripPixel = this.strip.pixel(ledIndex);
+                if (stripPixel) {
+                    stripPixel.color(color);
+                }
+                this.strip.show();
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataReadTimeout);
+            });
+        }
+    }
+
     enableMonitoring () {
         this._monitorData = {};
         if (this.monitoringPins) {
-            for (const key of this.monitoringPins) {
-                const pin = this.pins[key];
-                let pinIndex = this.parsePin(pin);
-                if (pin.startsWith('A')) {
-                    // Shifting to analog pin number.
-                    pinIndex = pinIndex - 14;
-                    this._firmata.reportAnalogPin(pinIndex, 1);
-                } else {
-                    this._firmata.reportDigitalPin(pinIndex, 1);
+            for (const item of this.monitoringPins) {
+                const key = item.key;
+                switch (key) {
+                case VL53L0X_ADRESS:
+                    if (this.distanceSensor) {
+                        this.distanceSensor.getDistance(Number(VL53L0X_ADRESS), data => {
+                            this._onPinMonitoring({pin: key, value: data.distance});
+                        }, false);
+                    }
+                    break;
+                default:
+                    const pin = this.pins[key];
+                    let pinIndex = this.parsePin(pin);
+                    if (pin.startsWith('A')) {
+                        // Shifting to analog pin number.
+                        pinIndex = pinIndex - 14;
+                        this._firmata.reportAnalogPin(pinIndex, 1);
+                    } else {
+                        this._firmata.reportDigitalPin(pinIndex, 1);
+                    }
+                    break;
                 }
-                this._monitorData[key] = 0;
+                this._monitorData[key] = {
+                    value: 0,
+                    description: formatMessage({
+                        id: item.messageId,
+                        default: key,
+                        description: `label for ${key} pin`
+                    })
+                };
             }
         }
         this._firmata.on('pin-monitoring', this._onPinMonitoring);
@@ -718,15 +886,23 @@ class ArduinoPeripheral extends Emitter {
     disableMonitoring () {
         this._monitorData = null;
         if (this.monitoringPins) {
-            for (const key of this.monitoringPins) {
-                const pin = this.pins[key];
-                let pinIndex = this.parsePin(pin);
-                if (pin.startsWith('A')) {
-                    // Shifting to analog pin number.
-                    pinIndex = pinIndex - 14;
-                    this._firmata.reportAnalogPin(pinIndex, 0);
-                } else {
-                    this._firmata.reportDigitalPin(pinIndex, 0);
+            for (const item of this.monitoringPins) {
+                const key = item.key;
+                switch (key) {
+                case VL53L0X_ADRESS:
+                    this._firmata.i2cStop({address: Number(key)});
+                    break;
+                default:
+                    const pin = this.pins[key];
+                    let pinIndex = this.parsePin(pin);
+                    if (pin.startsWith('A')) {
+                        // Shifting to analog pin number.
+                        pinIndex = pinIndex - 14;
+                        this._firmata.reportAnalogPin(pinIndex, 0);
+                    } else {
+                        this._firmata.reportDigitalPin(pinIndex, 0);
+                    }
+                    break;
                 }
             }
         }
@@ -735,9 +911,17 @@ class ArduinoPeripheral extends Emitter {
 
     _onPinMonitoring (data) {
         if (this._monitorData) {
-            const pin = Object.keys(this.pins)[data.pin];
-            if (this.monitoringPins && this.monitoringPins.indexOf(pin) > -1) {
-                this._monitorData[pin] = this.mapPinValue(this.pins[pin], data.value);
+            let pin = data.pin;
+            switch (pin) {
+            case VL53L0X_ADRESS:
+                break;
+            default:
+                pin = Object.keys(this.pins)[data.pin];
+                break;
+            }
+            if (this.monitoringPins && this.monitoringPins.find(item => item.key === pin)) {
+                const pinName = this.pins[pin];
+                this._monitorData[pin].value = this.mapPinValue(pinName || pin, data.value);
                 this._runtime.requestUpdateMonitor(Map({
                     id: this._deviceId,
                     value: {...this._monitorData}
@@ -778,6 +962,19 @@ class ArduinoPeripheral extends Emitter {
                 });
             });
         }
+    }
+
+    _throttle (mainFunction, delay) {
+        let timerFlag = null; // Variable to keep track of the timer
+        // Returning a throttled version
+        return (...args) => {
+            if (timerFlag === null) { // If there is no timer currently running
+                mainFunction(...args); // Execute the main function
+                timerFlag = setTimeout(() => { // Set a timer to clear the timerFlag after the specified delay
+                    timerFlag = null; // Clear the timerFlag to allow the main function to be executed again
+                }, delay);
+            }
+        };
     }
 }
 

@@ -13,11 +13,8 @@ const ProgramModeType = require('../../extension-support/program-mode-type');
 const Cast = require('../../util/cast');
 const MathUtil = require('../../util/math-util');
 const OpenBlockArduinoUnoDevice = require('../arduinoUno/arduinoUno');
-const pixel = require('../../lib/node-pixel');
-const tm1637 = require('../../lib/TM1637Display');
 const formatMessage = require('format-message');
 const log = require('../../util/log');
-const Color = require("../../util/color");
 
 /**
  * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
@@ -122,10 +119,10 @@ const PinsMap = {
     GreenLED: Pins.D5,
     YellowLED: Pins.D6,
     RedLED: Pins.D7,
-    Button1: Pins.D8,
-    Button2: Pins.D9,
-    Button3: Pins.D10,
-    Button4: Pins.D12,
+    Button4: Pins.D8,
+    Button1: Pins.D9,
+    Button2: Pins.D10,
+    Button3: Pins.D12,
     Button5: Pins.D11,
     LEDStrip: Pins.D13,
     TempSensor: Pins.A0,
@@ -136,15 +133,36 @@ const PinsMap = {
     I2CSCL: Pins.A5
 };
 
-const MonitoringPins = ['D8', 'D9', 'D10', 'D11', 'D12', 'A0', 'A2', 'A3', 'A4'];
+function createMonitoringPins (pinNames) {
+    const result = [];
+    for (const pinName of pinNames) {
+        const pinNumber = PinsMap[pinName];
+        const pin = Object.keys(Pins).find(key => Pins[key] === pinNumber);
+        result.push({
+            key: pin,
+            messageId: `roboPro.station.PinsMap.${pinName}`
+        });
+    }
+    return result;
+}
+
+const MonitoringPins = createMonitoringPins([
+    'Button1',
+    'Button2',
+    'Button3',
+    'Button4',
+    'Button5',
+    'TempSensor',
+    'LightSensor',
+    'Slider',
+    'SoundSensor'
+]);
 
 const IN_SENSOR_MIN = 0;
 const IN_SOUND_SENSOR_MIN = 200;
 const IN_SENSOR_MAX = 1023;
 const OUT_SENSOR_MIN = 0;
 const OUT_SENSOR_MAX = 100;
-const LED_STRIP_LENGTH = 16;
-const LED_STRIP_BLACK_COLOR = '#000';
 // const TEMP_VOLTS_PER_DEGREE = 0.02; // 0.02 for TMP37, 0.01 for TMP35/36
 // const TEMP_OUTPUT_VOLTAGE = 0.25; // 0.25 for TMP35, 0.75 for TMP36, 0.5 for TMP37
 // const TEMP_OFFSET_VALUE = TEMP_OUTPUT_VOLTAGE - (25 * TEMP_VOLTS_PER_DEGREE); // calculating the offset for 0 °C
@@ -174,12 +192,8 @@ class RoboProStation extends ArduinoPeripheral {
         let inSensorMin = IN_SENSOR_MIN;
         switch (pin) {
         case PinsMap.TempSensor: {
-            // const volts = value * 5.0 / 1024.0;
             return Math.round(value);
         }
-        case PinsMap.LightSensor:
-            value = IN_SENSOR_MAX - value;
-            break;
         case PinsMap.SoundSensor:
             inSensorMin = IN_SOUND_SENSOR_MIN;
             break;
@@ -635,17 +649,8 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
         this._peripheral.setPinMode(PinsMap.Button3, Mode.InputPullup);
         this._peripheral.setPinMode(PinsMap.Button4, Mode.InputPullup);
         this._peripheral.setPinMode(PinsMap.Button5, Mode.InputPullup);
-        this.display = tm1637({
-            clk: PinsMap.ClkLED,
-            dio: PinsMap.DataLED,
-            board: this._peripheral._firmata
-        });
-        this.strip = new pixel.Strip({
-            data: PinsMap.LEDStrip,
-            length: LED_STRIP_LENGTH,
-            firmata: this._peripheral._firmata,
-            skip_firmware_check: true
-        });
+        this._peripheral.initDisplay(PinsMap.ClkLED, PinsMap.DataLED);
+        this._peripheral.initLedStrip(PinsMap.LEDStrip);
     }
 
     /**
@@ -1069,7 +1074,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                         items: this.EOL_MENU
                     }
                 }
-            },
+            }
         ];
     }
 
@@ -1079,19 +1084,9 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
      */
     ledTurn (args) {
-        let color = args.COLOR;
+        const color = args.COLOR;
         const value = args.VALUE;
-        if (this.strip) {
-            if (Number.isInteger(color)) {
-                color = Color.decimalToHex(color);
-            }
-            if (value === 'off') {
-                this.strip.off();
-            } else {
-                this.strip.color(color);
-                this.strip.show();
-            }
-        }
+        return this._peripheral.ledStripTurn(color, value);
     }
 
     /**
@@ -1101,21 +1096,9 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      */
     ledPixelTurn (args) {
         const ledIndex = args.LED_INDEX;
-        let color = args.COLOR;
+        const color = args.COLOR;
         const value = args.VALUE;
-        if (this.strip) {
-            if (Number.isInteger(color)) {
-                color = Color.decimalToHex(color);
-            }
-            if (value === 'off') {
-                color = LED_STRIP_BLACK_COLOR;
-            }
-            const stripPixel = this.strip.pixel(ledIndex);
-            if (stripPixel) {
-                stripPixel.color(color);
-            }
-            this.strip.show();
-        }
+        return this._peripheral.ledStripPixelTurn(ledIndex, color, value);
     }
 
     /**
@@ -1136,46 +1119,28 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
 
     setIndicatorBrightness (args) {
         const value = args.VALUE;
-        if (this.display) {
-            this.display.setBrightness(value);
-        }
+        return this._peripheral.setIndicatorBrightness(value);
     }
 
     setIndicatorDigitValue (args) {
         const digit = args.DIGIT;
         const value = args.VALUE;
-        if (this.display) {
-            this.display.setDigit(digit, value);
-        }
+        return this._peripheral.setIndicatorDigitValue(digit, value);
     }
 
     setIndicatorValue (args) {
         const value = args.VALUE;
-        if (this.display) {
-            this.display.show(value);
-        }
+        return this._peripheral.setIndicatorValue(value);
     }
 
     turnIndicatorSeparator (args) {
         const value = args.VALUE;
-        if (this.display) {
-            if (value === 'on') {
-                this.display.separatorOn();
-            } else {
-                this.display.separatorOff();
-            }
-        }
+        return this._peripheral.turnIndicatorSeparator(value);
     }
 
     turnIndicator (args) {
         const value = args.VALUE;
-        if (this.display) {
-            if (value === 'on') {
-                this.display.on();
-            } else {
-                this.display.off();
-            }
-        }
+        return this._peripheral.turnIndicator(value);
     }
 
     /**
@@ -1228,16 +1193,16 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      * @param {object} args - the block's arguments.
      * @return {Promise} - true if read high level, false if read low level.
      */
-    readButton(args) {
+    readButton (args) {
         return this._peripheral.readDigitalPin(args.PIN)
             .then(value => {
-                if (value == 0) {
+                if (value === 0) {
                     value = 1;
                 } else {
                     value = 0;
                 }
                 return value;
-            })
+            });
     }
 
     /**

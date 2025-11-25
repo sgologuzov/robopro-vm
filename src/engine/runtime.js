@@ -1930,8 +1930,8 @@ class Runtime extends EventEmitter {
      * Enable peripheral monitoring.
      * @param {string} deviceId - the id of the extension.
      */
-    enablePeripheralMonitoring (deviceId) {
-        deviceId = this.analysisRealDeviceId(deviceId);
+    enablePeripheralMonitoring (opcode) {
+        const deviceId = this.analysisRealDeviceId(opcode);
         const peripheral = this.peripheralExtensions[deviceId];
         if (peripheral) {
             if (!this.requestShowMonitor(deviceId)) {
@@ -1940,7 +1940,7 @@ class Runtime extends EventEmitter {
                     id: deviceId,
                     mode: 'object',
                     draggable: false,
-                    opcode: deviceId,
+                    opcode,
                     target: this._editingTarget,
                     value: monitorObject
                 }));
@@ -1953,8 +1953,8 @@ class Runtime extends EventEmitter {
      * Disable peripheral monitoring.
      * @param {string} deviceId - the id of the extension.
      */
-    disablePeripheralMonitoring (deviceId) {
-        deviceId = this.analysisRealDeviceId(deviceId);
+    disablePeripheralMonitoring (opcode) {
+        const deviceId = this.analysisRealDeviceId(opcode);
         const device = this.peripheralExtensions[deviceId];
         if (device) {
             device.disableMonitoring();
@@ -3130,16 +3130,20 @@ class Runtime extends EventEmitter {
         if (!(category && opcode)) return;
 
         const categoryInfo = this._blockInfo.find(ci => ci.id === category) ||
-            this._deviceBlockInfo.find(ci => ci.id === category);
+            this._deviceBlockInfo.find(ci => ci.id === extendedOpcode);
         if (!categoryInfo) return;
 
         const block = categoryInfo.blocks.find(b => b.info.opcode === opcode);
-        if (!block) return;
-
-        // TODO: we may want to format the label in a locale-specific way.
+        if (block) {
+            // TODO: we may want to format the label in a locale-specific way.
+            return {
+                category: 'extension', // This assumes that all extensions have the same monitor color.
+                label: `${categoryInfo.name}: ${block.info.text}`
+            };
+        }
         return {
             category: 'extension', // This assumes that all extensions have the same monitor color.
-            label: `${categoryInfo.name}: ${block.info.text}`
+            label: `${categoryInfo.name}`
         };
     }
 

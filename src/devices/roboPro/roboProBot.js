@@ -15,6 +15,8 @@ const ProgramModeType = require('../../extension-support/program-mode-type');
 const Timer = require('../../util/timer');
 const Cast = require('../../util/cast');
 
+const VL53L0X_ADRESS = '0x29';
+
 /**
  * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
  * @type {string}
@@ -132,15 +134,35 @@ const PinsMap = {
     RightMotorReverse: Pins.D13,
      */
     // Common
-    A0: Pins.A0,
-    A1: Pins.A1,
+    LineSensorL: Pins.A0,
+    LineSensorR: Pins.A1,
     A2: Pins.A2,
-    A3: Pins.A3,
-    A4: Pins.A4,
-    A5: Pins.A5
+    LightSensor: Pins.A3,
+    DistanceSensor: VL53L0X_ADRESS
 };
 
-const MonitoringPins = ['A0', 'A1', 'A2', 'A3', 'A4', 'A5'];
+function createMonitoringPins (pinNames) {
+    const result = [];
+    for (const pinName of pinNames) {
+        const pinNumber = PinsMap[pinName];
+        let pin = Object.keys(Pins).find(key => Pins[key] === pinNumber);
+        if (!pin) {
+            pin = pinNumber;
+        }
+        result.push({
+            key: pin,
+            messageId: `roboPro.bot.PinsMap.${pinName}`
+        });
+    }
+    return result;
+}
+
+const MonitoringPins = createMonitoringPins([
+    'LineSensorL',
+    'LineSensorR',
+    'LightSensor',
+    'DistanceSensor'
+]);
 
 const MIN_MOTOR_POWER = 0;
 const MAX_MOTOR_POWER = 255;
@@ -173,21 +195,15 @@ class RoboProBot extends ArduinoPeripheral {
      */
     mapPinValue (pin, value) {
         switch (pin) {
-        case PinsMap.A3:
-            value = IN_SENSOR_MAX - value;
-            break;
-        }
-
-        switch (pin) {
-        case Pins.A0:
-        case Pins.A1:
-        case Pins.A2:
-        case Pins.A3:
-        case Pins.A4:
-        case Pins.A5:
+        case PinsMap.LineSensorL:
+        case PinsMap.LineSensorR:
+        case PinsMap.A2:
+        case PinsMap.LightSensor:
             value = ((value - IN_SENSOR_MIN) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - IN_SENSOR_MIN)) +
                 OUT_SENSOR_MIN;
             return Math.round(value);
+        case PinsMap.DistanceSensor:
+            return(value / 10);
         }
         return value;
     }
@@ -246,51 +262,35 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
         return [
             {
                 text: formatMessage({
-                    id: 'roboPro.sensorsMenu.sensorA0',
-                    default: 'A0',
-                    description: 'label for A0 sensor'
+                    id: 'roboPro.sensorsMenu.lightSensor',
+                    default: 'light sensor',
+                    description: 'label for light sensor'
                 }),
-                value: PinsMap.A0
+                value: PinsMap.LightSensor
             },
             {
                 text: formatMessage({
-                    id: 'roboPro.sensorsMenu.sensorA1',
-                    default: 'A1',
-                    description: 'label for A1 sensor'
+                    id: 'roboPro.sensorsMenu.distanceSensor',
+                    default: 'distance sensor',
+                    description: 'label for distance sensor'
                 }),
-                value: PinsMap.A1
+                value: PinsMap.DistanceSensor
             },
             {
                 text: formatMessage({
-                    id: 'roboPro.sensorsMenu.sensorA2',
-                    default: 'A2',
-                    description: 'label for A2 sensor'
+                    id: 'roboPro.sensorsMenu.LineSensorL',
+                    default: 'line L sensor',
+                    description: 'label for line L sensor'
                 }),
-                value: PinsMap.A2
+                value: PinsMap.LineSensorL
             },
             {
                 text: formatMessage({
-                    id: 'roboPro.sensorsMenu.sensorA3',
-                    default: 'A3',
-                    description: 'label for A3 sensor'
+                    id: 'roboPro.sensorsMenu.LineSensorR',
+                    default: 'line R sensor',
+                    description: 'label for line R sensor'
                 }),
-                value: PinsMap.A3
-            },
-            {
-                text: formatMessage({
-                    id: 'roboPro.sensorsMenu.sensorA4',
-                    default: 'A4',
-                    description: 'label for A4 sensor'
-                }),
-                value: PinsMap.A4
-            },
-            {
-                text: formatMessage({
-                    id: 'roboPro.sensorsMenu.sensorA5',
-                    default: 'A5',
-                    description: 'label for A5 sensor'
-                }),
-                value: PinsMap.A5
+                value: PinsMap.LineSensorR
             }
         ];
     }
@@ -341,6 +341,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
         this._peripheral.setPinMode(PinsMap.LeftMotorPwm, Mode.Output);
         this._peripheral.setPinMode(PinsMap.RightMotorReverse, Mode.Output);
         this._peripheral.setPinMode(PinsMap.RightMotorPwm, Mode.Output);
+        this._peripheral.initDistanceSensor(PinsMap.DistanceSensor);
     }
 
     /**
@@ -719,7 +720,16 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
      * @return {Promise} - a Promise that resolves when read from peripheral.
      */
     readSensor (args) {
-        const promise = this._peripheral.readAnalogPin(args.PIN);
+        const pin = args.PIN;
+        let promise;
+        switch (pin) {
+        case PinsMap.DistanceSensor:
+            promise = this._peripheral.readDistance(pin);
+            break;
+        default:
+            promise = this._peripheral.readAnalogPin(pin);
+            break;
+        }
         return promise.then(value => this._peripheral.mapPinValue(args.PIN, value));
     }
 

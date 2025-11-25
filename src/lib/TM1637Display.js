@@ -26,8 +26,6 @@ const codigitToSegmentASCII = [
     0x00, 0x00, 0x00, 0x00, 0x63, 0x00, 0x00, 0x00, 0x00, 0x00
 ];
 
-const LENGTH = 4;
-
 const DATA_CMD = 0x40;
 const DISP_CMD = 0x80;
 const ADDR_CMD = 0xc0;
@@ -94,7 +92,7 @@ class TM1637Display {
     // clock high in, high out
     start () {
         // pinDIO  high -> low when clock is high
-        this.low(this.pinDIO);
+        return this.low(this.pinDIO);
     }
 
     // clock high in, high out
@@ -171,9 +169,9 @@ class TM1637Display {
 
     show (str) {
         this.digits = [0x00, 0x00, 0x00, 0x00];
-        let nums = (`${str}`).split('');
+        const nums = (`${str}`).split('');
         for (let i = 0, j = 0; i < nums.length && j < 4; i++) {
-            let num = nums[i];
+            const num = nums[i];
             if (num === '.' || num === ':') {
                 // show point or colon for previous number if needed
                 if (j > 0) {
