@@ -125,8 +125,8 @@ class ArduinoPeripheral extends Emitter {
         this.reset = this.reset.bind(this);
         this._onConnect = this._onConnect.bind(this);
         this._onMessage = this._onMessage.bind(this);
-        this._onPinMonitoring = this._throttle(this._onPinMonitoring.bind(this), 250);
-
+        //this._onPinMonitoring = this._throttle(this._onPinMonitoring.bind(this), 250);
+        this._onPinMonitoring = this._onPinMonitoring.bind(this);
         /**
          * Firmata connection.
          * @type {?Firmata}
@@ -747,7 +747,7 @@ class ArduinoPeripheral extends Emitter {
                 this.display.setBrightness(value);
                 window.setTimeout(() => {
                     resolve();
-                }, FrimataReadTimeout);
+                }, FrimataWriteTimeout);
             });
         }
     }
@@ -758,7 +758,7 @@ class ArduinoPeripheral extends Emitter {
                 this.display.setDigit(digit, value);
                 window.setTimeout(() => {
                     resolve();
-                }, FrimataReadTimeout);
+                }, FrimataWriteTimeout);
             });
         }
     }
@@ -769,7 +769,7 @@ class ArduinoPeripheral extends Emitter {
                 this.display.show(value);
                 window.setTimeout(() => {
                     resolve();
-                }, FrimataReadTimeout);
+                }, FrimataWriteTimeout);
             });
         }
     }
@@ -784,7 +784,7 @@ class ArduinoPeripheral extends Emitter {
                 }
                 window.setTimeout(() => {
                     resolve();
-                }, FrimataReadTimeout);
+                }, FrimataWriteTimeout);
             });
         }
     }
@@ -799,7 +799,7 @@ class ArduinoPeripheral extends Emitter {
                 }
                 window.setTimeout(() => {
                     resolve();
-                }, FrimataReadTimeout);
+                }, FrimataWriteTimeout);
             });
         }
     }
@@ -818,7 +818,7 @@ class ArduinoPeripheral extends Emitter {
                 }
                 window.setTimeout(() => {
                     resolve();
-                }, FrimataReadTimeout);
+                }, FrimataWriteTimeout);
             });
         }
     }
@@ -839,7 +839,7 @@ class ArduinoPeripheral extends Emitter {
                 this.strip.show();
                 window.setTimeout(() => {
                     resolve();
-                }, FrimataReadTimeout);
+                }, FrimataWriteTimeout);
             });
         }
     }
