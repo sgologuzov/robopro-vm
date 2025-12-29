@@ -76,7 +76,7 @@
     "json": "^9.0.4",
     "lodash.defaultsdeep": "4.6.1",
     "pngjs": "3.3.3",
-    "robopro-blocks": "^0.1.7",
+    "robopro-blocks": "^0.1.12",
     "scratch-audio": "0.1.0-prerelease.20200528195344",
     "scratch-render": "0.1.0-prerelease.20211028200436",
     "scratch-render-fonts": "1.0.0-prerelease.20210401210003",

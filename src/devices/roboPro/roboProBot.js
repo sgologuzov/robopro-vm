@@ -126,6 +126,7 @@ const PinsMap = {
     RightMotorReverse: Pins.D7,
     LeftLight: Pins.D8,
     RightLight: Pins.D12,
+    LEDStrip: Pins.D13,
     // Keyestudio
     /*
     LeftMotorReverse: Pins.D12,
@@ -258,6 +259,75 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
         ];
     }
 
+    get LEDS_MENU () {
+        return [
+            {
+                text: '0',
+                value: '0'
+            },
+            {
+                text: '1',
+                value: '1'
+            },
+            {
+                text: '2',
+                value: '2'
+            },
+            {
+                text: '3',
+                value: '3'
+            },
+            {
+                text: '4',
+                value: '4'
+            },
+            {
+                text: '5',
+                value: '5'
+            },
+            {
+                text: '6',
+                value: '6'
+            },
+            {
+                text: '7',
+                value: '7'
+            },
+            {
+                text: '8',
+                value: '8'
+            },
+            {
+                text: '9',
+                value: '9'
+            },
+            {
+                text: '10',
+                value: '10'
+            },
+            {
+                text: '11',
+                value: '11'
+            },
+            {
+                text: '12',
+                value: '12'
+            },
+            {
+                text: '13',
+                value: '13'
+            },
+            {
+                text: '14',
+                value: '14'
+            },
+            {
+                text: '15',
+                value: '15'
+            }
+        ];
+    }
+
     get SENSORS_MENU () {
         return [
             {
@@ -342,6 +412,7 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
         this._peripheral.setPinMode(PinsMap.RightMotorReverse, Mode.Output);
         this._peripheral.setPinMode(PinsMap.RightMotorPwm, Mode.Output);
         this._peripheral.initDistanceSensor(PinsMap.DistanceSensor);
+        this._peripheral.initLedStrip(PinsMap.LEDStrip);
     }
 
     /**
@@ -363,6 +434,51 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                 color3: '#00AF41',
 
                 blocks: [
+                    {
+                        opcode: 'ledPixelTurn',
+                        text: formatMessage({
+                            id: 'roboPro.station.ledPixelTurn',
+                            default: 'turn LED [LED_INDEX] [COLOR] [VALUE]',
+                            description: 'Turn LED'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            LED_INDEX: {
+                                type: ArgumentType.UINT8_NUMBER,
+                                menu: 'leds',
+                                defaultValue: '0'
+                            },
+                            COLOR: {
+                                type: ArgumentType.COLOR,
+                                defaultValue: '#f00'
+                            },
+                            VALUE: {
+                                type: ArgumentType.STRING,
+                                menu: 'onOff',
+                                defaultValue: 'on'
+                            }
+                        }
+                    },
+                    {
+                        opcode: 'ledTurn',
+                        text: formatMessage({
+                            id: 'roboPro.station.ledTurn',
+                            default: 'turn LED [COLOR] [VALUE]',
+                            description: 'Turn LED'
+                        }),
+                        blockType: BlockType.COMMAND,
+                        arguments: {
+                            COLOR: {
+                                type: ArgumentType.COLOR,
+                                defaultValue: '#f00'
+                            },
+                            VALUE: {
+                                type: ArgumentType.STRING,
+                                menu: 'onOff',
+                                defaultValue: 'on'
+                            }
+                        }
+                    },
                     {
                         opcode: 'motorsOnForSeconds',
                         text: formatMessage({
@@ -610,6 +726,10 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                     }
                 ],
                 menus: {
+                    leds: {
+                        acceptReporters: true,
+                        items: this.LEDS_MENU
+                    },
                     directions: {
                         items: this.DIRECTIONS_MENU
                     },
@@ -622,6 +742,29 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
                 }
             }
         ];
+    }
+
+    /**
+     * Turn LED strip on/off.
+     * @param {object} args - the block's arguments.
+     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
+     */
+    ledTurn (args) {
+        const color = args.COLOR;
+        const value = args.VALUE;
+        return this._peripheral.ledStripTurn(color, value);
+    }
+
+    /**
+     * Turn LED strip pixel on/off.
+     * @param {object} args - the block's arguments.
+     * @return {Promise} - a Promise that resolves on fixed write timeout to peripheral.
+     */
+    ledPixelTurn (args) {
+        const ledIndex = args.LED_INDEX;
+        const color = args.COLOR;
+        const value = args.VALUE;
+        return this._peripheral.ledStripPixelTurn(ledIndex, color, value);
     }
 
     /**
