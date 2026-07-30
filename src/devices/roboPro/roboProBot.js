@@ -958,7 +958,9 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
     _motorsOff () {
         return Promise.all([
             this._peripheral.setPwmOutput(PinsMap.LeftMotorPwm, MIN_MOTOR_POWER),
-            this._peripheral.setPwmOutput(PinsMap.RightMotorPwm, MIN_MOTOR_POWER)
+            this._peripheral.setPwmOutput(PinsMap.RightMotorPwm, MIN_MOTOR_POWER),
+            this._peripheral.setDigitalOutput(PinsMap.LeftMotorReverse, Level.Low),
+            this._peripheral.setDigitalOutput(PinsMap.RightMotorReverse, Level.Low)
         ]);
     }
 
