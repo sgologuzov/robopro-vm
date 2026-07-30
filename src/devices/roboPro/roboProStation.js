@@ -199,6 +199,7 @@ class RoboProStation extends ArduinoPeripheral {
             break;
         }
         switch (pin) {
+        // Аналоговые входы. Перевод в проценты
         case Pins.A0:
         case Pins.A1:
         case Pins.A2:
@@ -207,6 +208,18 @@ class RoboProStation extends ArduinoPeripheral {
             value = ((value - inSensorMin) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - inSensorMin)) +
                 OUT_SENSOR_MIN;
             return Math.round(value);
+        // Инвертирование сигнала от кнопок
+        case PinsMap.Button1:
+        case PinsMap.Button2:
+        case PinsMap.Button3:
+        case PinsMap.Button4:
+        case PinsMap.Button5:
+            if (value === 0) {
+                value = 1;
+            } else {
+                value = 0;
+            }
+            return value;
         }
         return value;
     }
@@ -1195,14 +1208,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
      */
     readButton (args) {
         return this._peripheral.readDigitalPin(args.PIN)
-            .then(value => {
-                if (value === 0) {
-                    value = 1;
-                } else {
-                    value = 0;
-                }
-                return value;
-            });
+            .then(value => this._peripheral.mapPinValue(args.PIN, value));
     }
 
     /**
