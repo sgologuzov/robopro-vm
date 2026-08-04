@@ -54,6 +54,11 @@ const FrimataReadTimeout = 2000;
  */
 const FrimataWriteTimeout = 20;
 
+/**
+ * A time interval to wait indicator accepts data.
+ */
+const IndicatorWriteTimeout = 200;
+
 const Level = {
     High: 'HIGH',
     Low: 'LOW'
@@ -747,7 +752,7 @@ class ArduinoPeripheral extends Emitter {
                 this.display.setBrightness(value);
                 window.setTimeout(() => {
                     resolve();
-                }, FrimataWriteTimeout);
+                }, IndicatorWriteTimeout);
             });
         }
     }
@@ -758,7 +763,7 @@ class ArduinoPeripheral extends Emitter {
                 this.display.setDigit(digit, value);
                 window.setTimeout(() => {
                     resolve();
-                }, FrimataWriteTimeout);
+                }, IndicatorWriteTimeout);
             });
         }
     }
@@ -769,7 +774,7 @@ class ArduinoPeripheral extends Emitter {
                 this.display.show(value);
                 window.setTimeout(() => {
                     resolve();
-                }, FrimataWriteTimeout);
+                }, IndicatorWriteTimeout);
             });
         }
     }
@@ -784,7 +789,7 @@ class ArduinoPeripheral extends Emitter {
                 }
                 window.setTimeout(() => {
                     resolve();
-                }, FrimataWriteTimeout);
+                }, IndicatorWriteTimeout);
             });
         }
     }
@@ -799,7 +804,7 @@ class ArduinoPeripheral extends Emitter {
                 }
                 window.setTimeout(() => {
                     resolve();
-                }, FrimataWriteTimeout);
+                }, IndicatorWriteTimeout);
             });
         }
     }

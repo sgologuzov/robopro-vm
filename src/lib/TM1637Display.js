@@ -125,7 +125,6 @@ class TM1637Display {
 
     // clock high in, low out
     writeByte (byte) {
-        console.log('[writeByte] byte:', byte);
         // 0b00000000
         let b = byte;
         for (let i = 0; i < 8; i++) {
