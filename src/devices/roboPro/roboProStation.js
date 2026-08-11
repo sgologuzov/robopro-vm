@@ -15,6 +15,7 @@ const MathUtil = require('../../util/math-util');
 const OpenBlockArduinoUnoDevice = require('../arduinoUno/arduinoUno');
 const formatMessage = require('format-message');
 const log = require('../../util/log');
+const {Map} = require('immutable');
 
 /**
  * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
@@ -222,6 +223,93 @@ class RoboProStation extends ArduinoPeripheral {
             return value;
         }
         return value;
+    }
+
+    enableMonitoring () {
+        this._monitorData = {};
+        if (this.monitoringPins) {
+            for (const item of this.monitoringPins) {
+                const key = item.key;
+                const pin = this.pins[key];
+                if (pin === Pins.A0) {
+                    // TempSensor is DS18B20 on OneWire, skip analog monitoring
+                    continue;
+                }
+                const pinIndex = this.parsePin(pin);
+                if (pin.startsWith('A')) {
+                    this._firmata.reportAnalogPin(pinIndex - 14, 1);
+                } else {
+                    this._firmata.reportDigitalPin(pinIndex, 1);
+                }
+                this._monitorData[key] = {
+                    value: 0,
+                    description: formatMessage({
+                        id: item.messageId,
+                        default: key,
+                        description: `label for ${key} pin`
+                    })
+                };
+            }
+        }
+        // Add TempSensor entry and start OneWire polling
+        const tempItem = this.monitoringPins.find(item => item.key === 'A0');
+        if (tempItem) {
+            this._monitorData[tempItem.key] = {
+                value: 0,
+                description: formatMessage({
+                    id: tempItem.messageId,
+                    default: tempItem.key,
+                    description: `label for ${tempItem.key} pin`
+                })
+            };
+            this._startTemperatureMonitoring();
+        }
+        this._firmata.on('pin-monitoring', this._onPinMonitoring);
+        return this._monitorData;
+    }
+
+    disableMonitoring () {
+        this._stopTemperatureMonitoring();
+        this._monitorData = null;
+        if (this.monitoringPins) {
+            for (const item of this.monitoringPins) {
+                const key = item.key;
+                const pin = this.pins[key];
+                if (pin === Pins.A0) {
+                    // TempSensor is DS18B20 on OneWire, skip analog disable
+                    continue;
+                }
+                const pinIndex = this.parsePin(pin);
+                if (pin.startsWith('A')) {
+                    this._firmata.reportAnalogPin(pinIndex - 14, 0);
+                } else {
+                    this._firmata.reportDigitalPin(pinIndex, 0);
+                }
+            }
+        }
+        this._firmata.removeAllListeners('pin-monitoring');
+    }
+
+    _startTemperatureMonitoring () {
+        this._stopTemperatureMonitoring();
+        this._temperatureIntervalId = window.setInterval(() => {
+            this.readDS18B20(Pins.A0, 0).then(value => {
+                if (this._monitorData && typeof value === 'string' && !isNaN(parseFloat(value))) {
+                    this._monitorData.A0.value = parseFloat(value);
+                    this._runtime.requestUpdateMonitor(Map({
+                        id: this._deviceId,
+                        value: {...this._monitorData}
+                    }));
+                }
+            });
+        }, 1000);
+    }
+
+    _stopTemperatureMonitoring () {
+        if (this._temperatureIntervalId) {
+            window.clearInterval(this._temperatureIntervalId);
+            this._temperatureIntervalId = null;
+        }
     }
 }
 
