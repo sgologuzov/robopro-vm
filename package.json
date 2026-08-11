@@ -1,6 +1,6 @@
 {
   "name": "robopro-vm",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "Virtual Machine for RoboPro",
   "author": "Massachusetts Institute of Technology",
   "license": "BSD-3-Clause",
@@ -8,7 +8,7 @@
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/sgologuzov/robopro-vm.git",
-    "sha": "eec00db3bfac90194c56052cfc175f7f49004480"
+    "sha": "b5d0532c9bbdf0d4934619c848da6395e2b59955"
   },
   "main": "./dist/node/robopro-vm.js",
   "browser": "./src/index.js",
