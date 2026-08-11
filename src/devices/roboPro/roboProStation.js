@@ -922,7 +922,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                             }
                         }
                     },
-                    {
+                    /* {
                         opcode: 'setDigitalOutput',
                         text: formatMessage({
                             id: 'roboPro.station.setDigitalOutput',
@@ -962,7 +962,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
                                 defaultValue: '255'
                             }
                         }
-                    },
+                    },*/
                     {
                         opcode: 'setIndicatorBrightness',
                         text: formatMessage({
