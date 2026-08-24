@@ -14,6 +14,42 @@ const VL53L0X_REG_SYSRANGE_MODE_START_STOP = 0x0001;
 const VL53L0X_REG_SYSRANGE_MODE_BACKTOBACK = 0x0002;
 const VL53L0X_REG_SYSRANGE_MODE_TIMED = 0x0004;
 
+const VL53L0X_STATUS_MIN_RANGE_FAIL = 0;
+const VL53L0X_STATUS_MAX_RANGE_FAIL = 1;
+const VL53L0X_STATUS_SIGNAL_FAIL = 2;
+const VL53L0X_STATUS_PHASE_OUT_OF_LIMIT = 3;
+const VL53L0X_STATUS_SIGMA_WARNING = 4;
+const VL53L0X_STATUS_WRAPPED_TARGET = 5;
+const VL53L0X_STATUS_INTERNAL_ERROR = 6;
+const VL53L0X_STATUS_HARDWARE_FAIL = 7;
+const VL53L0X_STATUS_SIGNAL_RATE_TOO_LOW = 8;
+const VL53L0X_STATUS_NO_TARGET = 9;
+const VL53L0X_STATUS_UNCORRELATED_SIGNAL = 10;
+const VL53L0X_STATUS_RANGE_VALID = 11;
+const VL53L0X_STATUS_RANGE_VALID_BELOW_MIN = 12;
+const VL53L0X_STATUS_RANGE_VALID_ABOVE_MAX = 13;
+const VL53L0X_STATUS_TARGET_SATURATED = 14;
+const VL53L0X_STATUS_HARDWARE_FAIL_2 = 15;
+
+const VL53L0X_STATUS_DESCRIPTIONS = {
+    0: 'Min range fail',
+    1: 'Max range fail',
+    2: 'Signal fail',
+    3: 'Phase out of valid limit',
+    4: 'Sigma estimator warning',
+    5: 'Wrapped target',
+    6: 'Internal algorithm error',
+    7: 'Hardware failure',
+    8: 'Signal rate too low',
+    9: 'No target detected',
+    10: 'Uncorrelated signal',
+    11: 'Range valid',
+    12: 'Range valid below min threshold',
+    13: 'Range valid above max threshold',
+    14: 'Target saturated',
+    15: 'Hardware failure'
+};
+
 class VL53L0X {
 
     constructor ({board, address = VL53L0X_DEF_I2C_ADDR}) {
@@ -70,14 +106,34 @@ class VL53L0X {
     }
 
     parseResult (data) {
+        const status = (data[0] & 0x78) >> 3;
         const res = {
             ambientCount: ((data[6] & 0xFF) << 8) | (data[7] & 0xFF),
             signalCount: ((data[8] & 0xFF) << 8) | (data[9] & 0xFF),
             distance: ((data[10] & 0xFF) << 8) | (data[11] & 0xFF),
-            status: ((data[0] & 0x78) >> 3)
+            status,
+            statusDescription: VL53L0X_STATUS_DESCRIPTIONS[status] || 'Unknown status'
         };
         return res;
     }
 }
 
 module.exports = config => new VL53L0X(config);
+module.exports.STATUS = {
+    MIN_RANGE_FAIL: VL53L0X_STATUS_MIN_RANGE_FAIL,
+    MAX_RANGE_FAIL: VL53L0X_STATUS_MAX_RANGE_FAIL,
+    SIGNAL_FAIL: VL53L0X_STATUS_SIGNAL_FAIL,
+    PHASE_OUT_OF_LIMIT: VL53L0X_STATUS_PHASE_OUT_OF_LIMIT,
+    SIGMA_WARNING: VL53L0X_STATUS_SIGMA_WARNING,
+    WRAPPED_TARGET: VL53L0X_STATUS_WRAPPED_TARGET,
+    INTERNAL_ERROR: VL53L0X_STATUS_INTERNAL_ERROR,
+    HARDWARE_FAIL: VL53L0X_STATUS_HARDWARE_FAIL,
+    SIGNAL_RATE_TOO_LOW: VL53L0X_STATUS_SIGNAL_RATE_TOO_LOW,
+    NO_TARGET: VL53L0X_STATUS_NO_TARGET,
+    UNCORRELATED_SIGNAL: VL53L0X_STATUS_UNCORRELATED_SIGNAL,
+    RANGE_VALID: VL53L0X_STATUS_RANGE_VALID,
+    RANGE_VALID_BELOW_MIN: VL53L0X_STATUS_RANGE_VALID_BELOW_MIN,
+    RANGE_VALID_ABOVE_MAX: VL53L0X_STATUS_RANGE_VALID_ABOVE_MAX,
+    TARGET_SATURATED: VL53L0X_STATUS_TARGET_SATURATED,
+    HARDWARE_FAIL_2: VL53L0X_STATUS_HARDWARE_FAIL_2
+};

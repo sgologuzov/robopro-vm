@@ -160,7 +160,6 @@ const MonitoringPins = createMonitoringPins([
 ]);
 
 const IN_SENSOR_MIN = 0;
-const IN_SOUND_SENSOR_MIN = 200;
 const IN_SENSOR_MAX = 1023;
 const OUT_SENSOR_MIN = 0;
 const OUT_SENSOR_MAX = 100;
@@ -194,10 +193,6 @@ class RoboProStation extends ArduinoPeripheral {
         switch (pin) {
         case PinsMap.TempSensor: {
             return Math.round(value);
-        }
-        case PinsMap.SoundSensor:
-            inSensorMin = IN_SOUND_SENSOR_MIN;
-            break;
         }
         switch (pin) {
         // Аналоговые входы. Перевод в проценты

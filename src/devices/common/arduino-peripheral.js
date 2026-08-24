@@ -11,6 +11,7 @@ const {Map} = require('immutable');
 const pixel = require('../../lib/node-pixel');
 const tm1637 = require('../../lib/TM1637Display');
 const VL53L0X = require('../../lib/VL53L0X');
+const {STATUS: VL53L0X_STATUS} = VL53L0X;
 
 const LED_STRIP_LENGTH = 16;
 const LED_STRIP_BLACK_COLOR = '#000';
@@ -184,6 +185,7 @@ class ArduinoPeripheral extends Emitter {
             board: this._firmata,
             address: Number(address)
         });
+        this._lastValidDistance = 0;
     }
 
     initDisplay (clkLed, dataLed) {
@@ -688,7 +690,14 @@ class ArduinoPeripheral extends Emitter {
         if (this.isReady()) {
             return new Promise(resolve => {
                 this.distanceSensor.getDistance(Number(address), data => {
-                    resolve(data.distance);
+                    if (data.status === VL53L0X_STATUS.RANGE_VALID ||
+                        data.status === VL53L0X_STATUS.RANGE_VALID_BELOW_MIN ||
+                        data.status === VL53L0X_STATUS.RANGE_VALID_ABOVE_MAX) {
+                        this._lastValidDistance = data.distance;
+                        resolve(data.distance);
+                    } else {
+                        resolve(this._lastValidDistance);
+                    }
                 });
                 window.setTimeout(() => {
                     resolve();
@@ -858,7 +867,12 @@ class ArduinoPeripheral extends Emitter {
                 case VL53L0X_ADRESS:
                     if (this.distanceSensor) {
                         this.distanceSensor.getDistance(Number(VL53L0X_ADRESS), data => {
-                            this._onPinMonitoring({pin: key, value: data.distance});
+                            if (data.status === VL53L0X_STATUS.RANGE_VALID ||
+                                data.status === VL53L0X_STATUS.RANGE_VALID_BELOW_MIN ||
+                                data.status === VL53L0X_STATUS.RANGE_VALID_ABOVE_MAX) {
+                                this._lastValidDistance = data.distance;
+                            }
+                            this._onPinMonitoring({pin: key, value: this._lastValidDistance});
                         }, false);
                     }
                     break;
