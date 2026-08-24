@@ -189,9 +189,9 @@ class RoboProStation extends ArduinoPeripheral {
      * @private
      */
     mapPinValue (pin, value) {
-        let inSensorMin = IN_SENSOR_MIN;
+        const inSensorMin = IN_SENSOR_MIN;
         switch (pin) {
-        case PinsMap.TempSensor: {
+        case PinsMap.TempSensor:
             return Math.round(value);
         }
         switch (pin) {
