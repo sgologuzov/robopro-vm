@@ -122,8 +122,8 @@ const PinsMap = {
     HeadLight: Pins.D2,
     LeftMotorReverse: Pins.D4,
     LeftMotorPwm: Pins.D5,
-    RightMotorReverse: Pins.D6,
-    RightMotorPwm: Pins.D7,
+    RightMotorPwm: Pins.D6,
+    RightMotorReverse: Pins.D7,
     LeftLight: Pins.D8,
     RightLight: Pins.D12,
     LEDStrip: Pins.D13,
@@ -204,7 +204,7 @@ class RoboProBot extends ArduinoPeripheral {
                 OUT_SENSOR_MIN;
             return Math.round(value);
         case PinsMap.DistanceSensor:
-            return(value / 10);
+            return (value / 10);
         }
         return value;
     }
@@ -948,19 +948,21 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
         return Promise.all([
             this._peripheral.setDigitalOutput(PinsMap.LeftMotorReverse,
                 this._directionLeft === Direction.Backward ? Level.High : Level.Low),
-            this._peripheral.setPwmOutput(PinsMap.LeftMotorPwm, this._powerLeft),
+            this._peripheral.setPwmOutput(PinsMap.LeftMotorPwm,
+                this._directionLeft === Direction.Backward ? this._invertMotorPower(this._powerLeft) : this._powerLeft),
             this._peripheral.setDigitalOutput(PinsMap.RightMotorReverse,
                 this._directionRight === Direction.Backward ? Level.High : Level.Low),
-            this._peripheral.setPwmOutput(PinsMap.RightMotorPwm, this._powerRight)
+            this._peripheral.setPwmOutput(PinsMap.RightMotorPwm,
+                this._directionRight === Direction.Backward ? this._invertMotorPower(this._powerRight) : this._powerRight)
         ]);
     }
 
     _motorsOff () {
         return Promise.all([
-            this._peripheral.setPwmOutput(PinsMap.LeftMotorPwm, MIN_MOTOR_POWER),
-            this._peripheral.setPwmOutput(PinsMap.RightMotorPwm, MIN_MOTOR_POWER),
-            this._peripheral.setDigitalOutput(PinsMap.LeftMotorReverse, Level.Low),
-            this._peripheral.setDigitalOutput(PinsMap.RightMotorReverse, Level.Low)
+            this._peripheral.setDigitalOutput(PinsMap.LeftMotorReverse, Level.High),
+            this._peripheral.setPwmOutput(PinsMap.LeftMotorPwm, MAX_MOTOR_POWER),
+            this._peripheral.setDigitalOutput(PinsMap.RightMotorReverse, Level.High),
+            this._peripheral.setPwmOutput(PinsMap.RightMotorPwm, MAX_MOTOR_POWER)
         ]);
     }
 
@@ -1006,6 +1008,31 @@ class OpenBlockRoboProBotDevice extends OpenBlockArduinoUnoDevice {
         if (timeElapsed < util.stackFrame.duration * 1000) {
             util.yield();
         }
+    }
+
+    /**
+     * Re-maps a number from range [MIN_MOTOR_POWER...MAX_MOTOR_POWER] to the range [MAX_MOTOR_POWER...MIN_MOTOR_POWER].
+     * @param {number} value - the input variable with the number to map.
+     * @return {number} - The mapped value.
+     * @private
+     */
+    _invertMotorPower (value) {
+        return this._map(value, MIN_MOTOR_POWER, MAX_MOTOR_POWER, MAX_MOTOR_POWER, MIN_MOTOR_POWER);
+    }
+
+    /**
+     * Re-maps a number from one range to another. That is, a value of fromLow would get mapped to toLow,
+     * a value of fromHigh to toHigh, values in-between to values in-between, etc.
+     * @param {number} value - the input variable with the number to map.
+     * @param {number} fromLow - the lower bound of the value’s current range.
+     * @param {number} fromHigh - the upper bound of the value’s current range.
+     * @param {number} toLow - the lower bound of the value’s target range.
+     * @param {number} toHigh -the upper bound of the value’s target range.
+     * @return {number} - The mapped value.
+     * @private
+     */
+    _map (value, fromLow, fromHigh, toLow, toHigh) {
+        return Math.trunc((value - fromLow) * (toHigh - toLow) / (fromHigh - fromLow));
     }
 }
 
