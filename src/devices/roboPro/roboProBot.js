@@ -142,7 +142,12 @@ const PinsMap = {
     DistanceSensor: VL53L0X_ADRESS
 };
 
-function createMonitoringPins (pinNames) {
+/**
+ * Build monitoring pin descriptors from PinsMap names.
+ * @param {Array.<string>} pinNames - logical pin names from PinsMap
+ * @return {Array.<{key: string, messageId: string}>} monitoring pin entries
+ */
+const createMonitoringPins = function (pinNames) {
     const result = [];
     for (const pinName of pinNames) {
         const pinNumber = PinsMap[pinName];
@@ -156,7 +161,7 @@ function createMonitoringPins (pinNames) {
         });
     }
     return result;
-}
+};
 
 const MonitoringPins = createMonitoringPins([
     'LineSensorL',

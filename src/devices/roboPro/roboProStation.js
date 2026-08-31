@@ -134,7 +134,12 @@ const PinsMap = {
     I2CSCL: Pins.A5
 };
 
-function createMonitoringPins (pinNames) {
+/**
+ * Build monitoring pin descriptors from PinsMap names.
+ * @param {Array.<string>} pinNames - logical pin names from PinsMap
+ * @return {Array.<{key: string, messageId: string}>} monitoring pin entries
+ */
+const createMonitoringPins = function (pinNames) {
     const result = [];
     for (const pinName of pinNames) {
         const pinNumber = PinsMap[pinName];
@@ -145,7 +150,7 @@ function createMonitoringPins (pinNames) {
         });
     }
     return result;
-}
+};
 
 const MonitoringPins = createMonitoringPins([
     'Button1',
@@ -163,6 +168,12 @@ const IN_SENSOR_MIN = 0;
 const IN_SENSOR_MAX = 1023;
 const OUT_SENSOR_MIN = 0;
 const OUT_SENSOR_MAX = 100;
+// Sound sensor smoothing (ported from Sound.ino).
+// Firmata samples ~every 50 ms, so use a wider window than Arduino's 30 ms.
+const SOUND_SAMPLE_WINDOW_MS = 150;
+const SOUND_NOISE_FLOOR = 3;
+const SOUND_MAX_SIGNAL = 600;
+const SOUND_LOW_SIGNAL_LIMIT = 20;
 // const TEMP_VOLTS_PER_DEGREE = 0.02; // 0.02 for TMP37, 0.01 for TMP35/36
 // const TEMP_OUTPUT_VOLTAGE = 0.25; // 0.25 for TMP35, 0.75 for TMP36, 0.5 for TMP37
 // const TEMP_OFFSET_VALUE = TEMP_OUTPUT_VOLTAGE - (25 * TEMP_VOLTS_PER_DEGREE); // calculating the offset for 0 °C
@@ -179,6 +190,9 @@ class RoboProStation extends ArduinoPeripheral {
      */
     constructor (runtime, deviceId, originalDeviceId) {
         super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DEVICE_OPT, Pins, MonitoringPins);
+        this._soundSamples = [];
+        this._smoothLowAmplitude = 0;
+        this._smoothLevel = 0;
     }
 
     /**
@@ -193,13 +207,14 @@ class RoboProStation extends ArduinoPeripheral {
         switch (pin) {
         case PinsMap.TempSensor:
             return Math.round(value);
+        case PinsMap.SoundSensor:
+            return this._mapSoundSensorValue(value);
         }
         switch (pin) {
         // Аналоговые входы. Перевод в проценты
         case Pins.A0:
         case Pins.A1:
         case Pins.A2:
-        case Pins.A3:
         case Pins.A4:
             value = ((value - inSensorMin) * (OUT_SENSOR_MAX - OUT_SENSOR_MIN) / (IN_SENSOR_MAX - inSensorMin)) +
                 OUT_SENSOR_MIN;
@@ -218,6 +233,70 @@ class RoboProStation extends ArduinoPeripheral {
             return value;
         }
         return value;
+    }
+
+    /**
+     * Smooth sound sensor readings using amplitude over a short sample window,
+     * noise floor removal, logarithmic scale and dual-rate EMA (from Sound.ino).
+     * @param {number} value - raw analog reading (0...1023)
+     * @return {number} smoothed level (0...100)
+     * @private
+     */
+    _mapSoundSensorValue (value) {
+        const now = Date.now();
+        this._soundSamples.push({value, time: now});
+        this._soundSamples = this._soundSamples.filter(
+            sample => now - sample.time <= SOUND_SAMPLE_WINDOW_MS
+        );
+
+        let minValue = 1023;
+        let maxValue = 0;
+        for (const sample of this._soundSamples) {
+            if (sample.value < minValue) {
+                minValue = sample.value;
+            }
+            if (sample.value > maxValue) {
+                maxValue = sample.value;
+            }
+        }
+        const amplitude = maxValue - minValue;
+
+        let processedAmplitude;
+        if (amplitude <= SOUND_LOW_SIGNAL_LIMIT) {
+            this._smoothLowAmplitude =
+                (this._smoothLowAmplitude * 0.60) + (amplitude * 0.40);
+            processedAmplitude = this._smoothLowAmplitude;
+        } else {
+            processedAmplitude = amplitude;
+        }
+
+        let usefulSignal = processedAmplitude - SOUND_NOISE_FLOOR;
+        if (usefulSignal < 0) {
+            usefulSignal = 0;
+        }
+        if (usefulSignal > SOUND_MAX_SIGNAL) {
+            usefulSignal = SOUND_MAX_SIGNAL;
+        }
+
+        let targetLevel = 0;
+        if (usefulSignal > 0) {
+            targetLevel =
+                100.0 *
+                Math.log(1.0 + usefulSignal) /
+                Math.log(1.0 + SOUND_MAX_SIGNAL);
+        }
+
+        if (targetLevel > this._smoothLevel) {
+            this._smoothLevel += (targetLevel - this._smoothLevel) * 0.60;
+        } else {
+            this._smoothLevel += (targetLevel - this._smoothLevel) * 0.45;
+        }
+
+        if (targetLevel === 0 && this._smoothLevel < 2) {
+            this._smoothLevel = 0;
+        }
+
+        return Math.round(this._smoothLevel);
     }
 
     enableMonitoring () {
