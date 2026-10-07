@@ -3057,6 +3057,27 @@ class Runtime extends EventEmitter {
      */
     emitProjectLoaded () {
         this.emit(Runtime.PROJECT_LOADED);
+        
+        // Восстановление peripheral monitoring после загрузки проекта
+        // Если peripheral уже подключен и в проекте есть visible peripheral monitors
+        this._monitorState.forEach((monitor, id) => {
+            if (monitor.mode === 'object' && monitor.visible) {
+                const deviceId = this.analysisRealDeviceId(monitor.opcode);
+                const peripheral = this.peripheralExtensions[deviceId];
+                if (peripheral) {
+                    const monitorObject = peripheral.enableMonitoring();
+                    this.requestAddMonitor(MonitorRecord({
+                        id: id,
+                        mode: 'object',
+                        draggable: false,
+                        opcode: monitor.opcode,
+                        target: this._editingTarget,
+                        value: monitorObject
+                    }));
+                    this.emit(Runtime.PERIPHERAL_MONITORING_UPDATE, {deviceId: deviceId, monitoring: true});
+                }
+            }
+        });
     }
 
     /**

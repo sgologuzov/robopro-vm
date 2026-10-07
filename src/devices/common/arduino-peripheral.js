@@ -178,6 +178,13 @@ class ArduinoPeripheral extends Emitter {
          * @private
          */
         this._oneWireDevices = Map();
+
+        /**
+         * 1-wire bus busy flags per pin
+         * @type {?Map}
+         * @private
+         */
+        this._oneWireBusy = Map();
     }
 
     initDistanceSensor (address) {
@@ -568,8 +575,12 @@ class ArduinoPeripheral extends Emitter {
                 // Инициализация пинов
                 switch (mode) {
                 case this._firmata.MODES.ONEWIRE:
-                    this._initOneWirePin(pin);
-                    break;
+                    this._initOneWirePin(pin).then(() => {
+                        window.setTimeout(() => {
+                            resolve();
+                        }, FrimataWriteTimeout);
+                    });
+                    return;
                 }
                 window.setTimeout(() => {
                     resolve();
@@ -660,39 +671,60 @@ class ArduinoPeripheral extends Emitter {
     }
 
     readDS18B20 (pin, deviceIndex) {
-        if (this.isReady()) {
-            pin = this.parsePin(pin);
-            const devices = this._oneWireDevices.get(pin).filter(item => item[0] === 0x28);
-            const device = devices[deviceIndex];
-            // TODO: устройство не найдено
-            this._firmata.sendOneWireReset(pin); // Reset
-            this._firmata.sendOneWireWrite(pin, device, 0x44); // Select device, process temp
-            this._firmata.sendOneWireDelay(pin, 1000); // Delay - prevents premature reading
-            this._firmata.sendOneWireReset(pin); // Reset
-
-            return new Promise(resolve => {
-                this._firmata.sendOneWireWriteAndRead(pin, device, 0xBE, 9, (err, data) => {
-                    if (err) {
-                        resolve(err);
-                    }
-
-                    const temp = ((data[1] << 8) | data[0]) / 16.0;
-                    resolve(temp.toFixed(1));
-                });
-                window.setTimeout(() => {
-                    resolve();
-                }, FrimataReadTimeout);
-            });
+        if (!this.isReady()) {
+            return Promise.resolve(null);
         }
+
+        pin = this.parsePin(pin);
+
+        if (this._oneWireBusy.get(pin)) {
+            return Promise.resolve(null);
+        }
+
+        const allDevices = this._oneWireDevices.get(pin);
+        if (!allDevices) {
+            return Promise.resolve(null);
+        }
+
+        this._oneWireBusy = this._oneWireBusy.set(pin, true);
+
+        const devices = allDevices.filter(item => item[0] === 0x28);
+        const device = devices[deviceIndex];
+        if (!device) {
+            this._oneWireBusy = this._oneWireBusy.set(pin, false);
+            return Promise.resolve(null);
+        }
+
+        this._firmata.sendOneWireReset(pin);
+        this._firmata.sendOneWireWrite(pin, device, 0x44);
+        this._firmata.sendOneWireDelay(pin, 1000);
+        this._firmata.sendOneWireReset(pin);
+
+        return new Promise(resolve => {
+            this._firmata.sendOneWireWriteAndRead(pin, device, 0xBE, 9, (err, data) => {
+                this._oneWireBusy = this._oneWireBusy.set(pin, false);
+                if (err) {
+                    resolve(err);
+                    return;
+                }
+
+                const temp = ((data[1] << 8) | data[0]) / 16.0;
+                resolve(temp.toFixed(1));
+            });
+            window.setTimeout(() => {
+                this._oneWireBusy = this._oneWireBusy.set(pin, false);
+                resolve(null);
+            }, FrimataReadTimeout);
+        });
     }
 
     readDistance (address) {
         if (this.isReady()) {
             return new Promise(resolve => {
                 this.distanceSensor.getDistance(Number(address), data => {
-                    if (data.status === VL53L0X_STATUS.RANGE_VALID ||
+                    if ((data.status === VL53L0X_STATUS.RANGE_VALID ||
                         data.status === VL53L0X_STATUS.RANGE_VALID_BELOW_MIN ||
-                        data.status === VL53L0X_STATUS.RANGE_VALID_ABOVE_MAX) {
+                        data.status === VL53L0X_STATUS.RANGE_VALID_ABOVE_MAX) && data.ambientCount > 100) {
                         this._lastValidDistance = data.distance;
                         resolve(data.distance);
                     } else {
@@ -867,9 +899,10 @@ class ArduinoPeripheral extends Emitter {
                 case VL53L0X_ADRESS:
                     if (this.distanceSensor) {
                         this.distanceSensor.getDistance(Number(VL53L0X_ADRESS), data => {
-                            if (data.status === VL53L0X_STATUS.RANGE_VALID ||
+                            if ((data.status === VL53L0X_STATUS.RANGE_VALID ||
                                 data.status === VL53L0X_STATUS.RANGE_VALID_BELOW_MIN ||
-                                data.status === VL53L0X_STATUS.RANGE_VALID_ABOVE_MAX) {
+                                data.status === VL53L0X_STATUS.RANGE_VALID_ABOVE_MAX) && data.ambientCount > 100) {
+                                console.log('[enableMonitoring] data:', data);
                                 this._lastValidDistance = data.distance;
                             }
                             this._onPinMonitoring({pin: key, value: this._lastValidDistance});
@@ -975,12 +1008,13 @@ class ArduinoPeripheral extends Emitter {
                     }
                     console.log('----------------------');
                     resolve();
-                    window.setTimeout(() => {
-                        resolve();
-                    }, FrimataReadTimeout);
                 });
+                window.setTimeout(() => {
+                    resolve();
+                }, FrimataReadTimeout);
             });
         }
+        return Promise.resolve();
     }
 
     _throttle (mainFunction, delay) {

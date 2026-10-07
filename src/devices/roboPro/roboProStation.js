@@ -190,6 +190,8 @@ class RoboProStation extends ArduinoPeripheral {
      */
     constructor (runtime, deviceId, originalDeviceId) {
         super(runtime, deviceId, originalDeviceId, PNPID_LIST, SERIAL_CONFIG, DEVICE_OPT, Pins, MonitoringPins);
+        this._lastTemperature = 0;
+        this._temperatureCacheTime = 0;
         this._soundSamples = [];
         this._smoothLowAmplitude = 0;
         this._smoothLevel = 0;
@@ -364,11 +366,41 @@ class RoboProStation extends ArduinoPeripheral {
         this._firmata.removeAllListeners('pin-monitoring');
     }
 
+    _readTemperatureCached () {
+        const now = Date.now();
+        const cacheAge = now - this._temperatureCacheTime;
+        const CACHE_TTL = 2000;
+
+        if (cacheAge < CACHE_TTL && this._temperatureCacheTime > 0) {
+            return Promise.resolve(this._lastTemperature.toFixed(1));
+        }
+
+        return this.readDS18B20(Pins.A0, 0).then(value => {
+            if (value !== null && typeof value === 'string' && !isNaN(parseFloat(value))) {
+                this._lastTemperature = parseFloat(value);
+                this._temperatureCacheTime = Date.now();
+            }
+            return this._lastTemperature.toFixed(1);
+        });
+    }
+
     _startTemperatureMonitoring () {
         this._stopTemperatureMonitoring();
+
+        // Немедленно обновить значение из кэша при старте
+        this._readTemperatureCached().then(value => {
+            if (this._monitorData && this._monitorData.A0) {
+                this._monitorData.A0.value = parseFloat(value);
+                this._runtime.requestUpdateMonitor(Map({
+                    id: this._deviceId,
+                    value: {...this._monitorData}
+                }));
+            }
+        });
+
         this._temperatureIntervalId = window.setInterval(() => {
-            this.readDS18B20(Pins.A0, 0).then(value => {
-                if (this._monitorData && typeof value === 'string' && !isNaN(parseFloat(value))) {
+            this._readTemperatureCached().then(value => {
+                if (this._monitorData && this._monitorData.A0) {
                     this._monitorData.A0.value = parseFloat(value);
                     this._runtime.requestUpdateMonitor(Map({
                         id: this._deviceId,
@@ -376,7 +408,7 @@ class RoboProStation extends ArduinoPeripheral {
                     }));
                 }
             });
-        }, 1000);
+        }, 2000);
     }
 
     _stopTemperatureMonitoring () {
@@ -818,7 +850,11 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
     }
 
     _init () {
-        this._peripheral.setPinMode(PinsMap.TempSensor, Mode.OneWire);
+        this._peripheral.setPinMode(PinsMap.TempSensor, Mode.OneWire).then(() => {
+            // Предварительное чтение температуры для заполнения кэша
+            // setPinMode уже дожидается завершения поиска устройств на шине
+            this._peripheral._readTemperatureCached();
+        });
         this._peripheral.setPinMode(PinsMap.Button1, Mode.InputPullup);
         this._peripheral.setPinMode(PinsMap.Button2, Mode.InputPullup);
         this._peripheral.setPinMode(PinsMap.Button3, Mode.InputPullup);
@@ -1354,7 +1390,7 @@ class OpenBlockRoboProStationDevice extends OpenBlockArduinoUnoDevice {
         let promise;
         switch (args.PIN) {
         case PinsMap.TempSensor:
-            promise = this._peripheral.readDS18B20(args.PIN, 0);
+            promise = this._peripheral._readTemperatureCached().then(value => parseFloat(value));
             break;
         default:
             promise = this._peripheral.readAnalogPin(args.PIN);
